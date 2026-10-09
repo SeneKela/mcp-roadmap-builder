@@ -1,24 +1,70 @@
 import express from 'express';
 import cors from 'cors';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { z } from 'zod';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT ?? 3000;
-const PAGES_URL = (process.env.PAGES_URL ?? 'https://pages.github.ibm.com/Martin-Burkel/Roadmap-builder').replace(/\/$/, '');
+const HOST = (process.env.RENDER_EXTERNAL_URL ?? `http://localhost:${PORT}`).replace(/\/$/, '');
 
-// ─── Deep-link helpers ──────────────────────────────────────────────────────
-function docToUrl(doc) {
-  const b64 = Buffer.from(JSON.stringify(doc)).toString('base64')
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${PAGES_URL}/index.html#doc=${b64}`;
+// ─── Load app template at startup ──────────────────────────────────────────
+// index.html lives one directory up (repo root). In production on Render the
+// repo root is the mcp-server/ folder, so we fall back gracefully.
+const __dir = dirname(fileURLToPath(import.meta.url));
+let APP_HTML;
+for (const candidate of [join(__dir, '..', 'index.html'), join(__dir, 'index.html')]) {
+  try { APP_HTML = readFileSync(candidate, 'utf8'); break; } catch {}
+}
+if (!APP_HTML) throw new Error('index.html not found — place it alongside mcp-server/ or inside it');
+
+// ─── Doc → self-contained HTML ──────────────────────────────────────────────
+// Replaces the `let doc = { ... };` declaration in index.html with the
+// generated doc, and removes the loadFromHash() call so the page opens
+// immediately with the right data even without a URL hash.
+function docToHtml(doc) {
+  const json = JSON.stringify(doc);
+  // Replace the doc declaration (everything between `let doc = ` and the
+  // closing `};` on its own line, which is followed by a blank line).
+  let html = APP_HTML.replace(
+    /let doc = \{[\s\S]*?\n\};/,
+    `let doc = ${json};`
+  );
+  return html;
 }
 
-function urlToDoc(url) {
-  const hash = url.includes('#doc=') ? url.split('#doc=')[1] : url;
-  const b64 = hash.replace(/-/g, '+').replace(/_/g, '/');
+// ─── In-memory download store (TTL 10 min) ─────────────────────────────────
+const downloads = new Map();
+function storeDoc(doc) {
+  const id = Math.random().toString(36).slice(2, 10);
+  downloads.set(id, { html: docToHtml(doc), doc, expires: Date.now() + 10 * 60 * 1000 });
+  // Prune expired entries
+  for (const [k, v] of downloads) if (v.expires < Date.now()) downloads.delete(k);
+  return id;
+}
+function downloadUrl(id) { return `${HOST}/download/${id}`; }
+
+// ─── doc_url helpers (carry doc between incremental tool calls) ─────────────
+function docToToken(doc) {
+  return Buffer.from(JSON.stringify(doc)).toString('base64')
+    .replace(/\+/g, '-').replace(/_/g, '_').replace(/=+$/, '');
+}
+function tokenToDoc(token) {
+  const b64 = token.replace(/-/g, '+').replace(/_/g, '/');
   return JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+}
+// Accept either a raw base64 token or a full download URL (extract token from path)
+function resolveDoc(doc_url) {
+  const match = doc_url.match(/\/download\/([a-z0-9]+)$/);
+  if (match) {
+    const entry = downloads.get(match[1]);
+    if (!entry) throw new Error('Download link expired or not found. Re-generate the roadmap.');
+    return entry.doc;
+  }
+  return tokenToDoc(doc_url);
 }
 
 // ─── Validation ─────────────────────────────────────────────────────────────
@@ -155,13 +201,15 @@ server.registerTool(
 server.registerTool(
   'generate_roadmap',
   {
-    description: `Validates a roadmap doc JSON and returns a deep-link URL that opens it in the IBM Roadmap Builder app.
+    description: `Validates a roadmap doc JSON, bakes it into a self-contained HTML file, and returns a download link.
 
 HOW TO USE THIS TOOL (two-step pattern):
 1. First call get_schema to learn the exact doc JSON format.
 2. Build the doc JSON yourself based on the user's description — periods, lanes, elements, story slides.
 3. Call this tool with doc_json = your complete doc JSON string.
-4. The tool validates it and returns a URL the user can open.
+4. The tool returns a download URL. The user opens it in a browser — the roadmap loads instantly, no login needed.
+
+The returned doc_token can be passed to add_lane, add_element, update_period, set_today for incremental edits.
 
 The doc JSON must follow the schema exactly. Common mistakes:
 - element laneId must match a lane id in the lanes array
@@ -193,11 +241,13 @@ The doc JSON must follow the schema exactly. Common mistakes:
       };
     }
 
-    const url = docToUrl(doc);
+    const id = storeDoc(doc);
+    const url = downloadUrl(id);
+    const token = docToToken(doc);
     return {
       content: [{
         type: 'text',
-        text: `✅ Roadmap ready!\n\nTitle: ${doc.title}\nPeriods: ${doc.periods.length}\nLanes: ${doc.lanes.length}\nElements: ${doc.elements.length}\n\n🔗 Open in Roadmap Builder:\n${url}`,
+        text: `✅ Roadmap ready!\n\nTitle: ${doc.title}\nPeriods: ${doc.periods.length}\nLanes: ${doc.lanes.length}\nElements: ${doc.elements.length}\n\n📥 Download & open (link valid 10 min):\n${url}\n\nThe file is a fully self-contained HTML — open it in any browser, no login needed. You can export to PDF/PPTX from inside the app.\n\n🔑 doc_token (pass to add_lane / add_element / update_period / set_today):\n${token}`,
       }],
     };
   }
@@ -207,29 +257,30 @@ The doc JSON must follow the schema exactly. Common mistakes:
 server.registerTool(
   'add_lane',
   {
-    description: 'Adds a new swim-lane to an existing roadmap and returns an updated deep-link URL.',
+    description: 'Adds a new swim-lane to an existing roadmap and returns an updated download link.',
     inputSchema: z.object({
-      doc_url: z.string().describe('The deep-link URL from a previous generate_roadmap or add_lane call (contains #doc=... in the hash).'),
+      doc_token: z.string().describe('The doc_token returned by generate_roadmap, add_lane, add_element, update_period, or set_today.'),
       lane_title: z.string().describe('Display title for the new lane.'),
       color: z.string().optional().describe('Hex color e.g. "#0f62fe". Defaults to IBM blue.'),
       kind: z.enum(['bars', 'cards']).optional().describe('"bars" for bar/umbrella/milestone elements, "cards" for card elements. Defaults to "bars".'),
     }),
   },
-  async ({ doc_url, lane_title, color = '#0f62fe', kind = 'bars' }) => {
+  async ({ doc_token, lane_title, color = '#0f62fe', kind = 'bars' }) => {
     let doc;
-    try { doc = urlToDoc(doc_url); } catch (e) {
-      return { content: [{ type: 'text', text: `Could not decode doc_url: ${e.message}` }], isError: true };
+    try { doc = resolveDoc(doc_token); } catch (e) {
+      return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
     }
 
     const id = nid('lane');
     doc.lanes.push({ id, title: lane_title, color, kind, pastTint: false });
     if (doc.sections.length > 0) doc.sections[0].laneIds.push(id);
 
-    const url = docToUrl(doc);
+    const dlId = storeDoc(doc);
+    const token = docToToken(doc);
     return {
       content: [{
         type: 'text',
-        text: `✅ Added lane "${lane_title}" (id: ${id})\n\nLanes now: ${doc.lanes.map(l => l.title).join(', ')}\n\n🔗 Updated URL:\n${url}`,
+        text: `✅ Added lane "${lane_title}" (id: ${id})\n\nLanes now: ${doc.lanes.map(l => l.title).join(', ')}\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
       }],
     };
   }
@@ -239,9 +290,9 @@ server.registerTool(
 server.registerTool(
   'add_element',
   {
-    description: 'Adds a new element (bar, card, umbrella, or milestone) to a lane and returns an updated deep-link URL.',
+    description: 'Adds a new element (bar, card, umbrella, or milestone) to a lane and returns an updated download link.',
     inputSchema: z.object({
-      doc_url: z.string().describe('The deep-link URL from a previous tool call.'),
+      doc_token: z.string().describe('The doc_token from a previous tool call.'),
       lane_id: z.string().describe('ID of the lane to add the element to. Use add_lane first if the lane does not exist yet.'),
       variant: z.enum(['bar', 'umbrella', 'card', 'milestone']).describe('Element shape. bar = horizontal bar, umbrella = spanning header bar, card = tall card with rich content, milestone = diamond marker.'),
       title: z.string().describe('Title text shown on the element.'),
@@ -251,10 +302,10 @@ server.registerTool(
       subtitle: z.string().optional().describe('Subtitle text (card variant only).'),
     }),
   },
-  async ({ doc_url, lane_id, variant, title, period_start, period_end, status, subtitle }) => {
+  async ({ doc_token, lane_id, variant, title, period_start, period_end, status, subtitle }) => {
     let doc;
-    try { doc = urlToDoc(doc_url); } catch (e) {
-      return { content: [{ type: 'text', text: `Could not decode doc_url: ${e.message}` }], isError: true };
+    try { doc = resolveDoc(doc_token); } catch (e) {
+      return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
     }
 
     if (!doc.lanes.find(l => l.id === lane_id)) {
@@ -279,11 +330,12 @@ server.registerTool(
     };
     doc.elements.push(el);
 
-    const url = docToUrl(doc);
+    const dlId = storeDoc(doc);
+    const token = docToToken(doc);
     return {
       content: [{
         type: 'text',
-        text: `✅ Added ${variant} "${title}" to lane "${lane_id}" (periods ${period_start}–${period_end})\n\n🔗 Updated URL:\n${url}`,
+        text: `✅ Added ${variant} "${title}" to lane "${lane_id}" (periods ${period_start}–${period_end})\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
       }],
     };
   }
@@ -293,19 +345,19 @@ server.registerTool(
 server.registerTool(
   'update_period',
   {
-    description: 'Updates the label, status, or narrative of a time period and returns an updated deep-link URL.',
+    description: 'Updates the label, status, or narrative of a time period and returns an updated download link.',
     inputSchema: z.object({
-      doc_url: z.string().describe('The deep-link URL from a previous tool call.'),
+      doc_token: z.string().describe('The doc_token from a previous tool call.'),
       period_index: z.number().int().describe('0-based index of the period to update.'),
       label: z.string().optional().describe('New label text e.g. "Q2 2025".'),
       status: z.string().optional().describe('completed | on-target | at-risk | delayed | not-started | cancelled | null'),
       narrative: z.string().optional().describe('Prose description shown in the story panel for this period.'),
     }),
   },
-  async ({ doc_url, period_index, label, status, narrative }) => {
+  async ({ doc_token, period_index, label, status, narrative }) => {
     let doc;
-    try { doc = urlToDoc(doc_url); } catch (e) {
-      return { content: [{ type: 'text', text: `Could not decode doc_url: ${e.message}` }], isError: true };
+    try { doc = resolveDoc(doc_token); } catch (e) {
+      return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
     }
 
     if (period_index < 0 || period_index >= doc.periods.length) {
@@ -317,11 +369,12 @@ server.registerTool(
     if (status !== undefined) p.status = status === 'null' ? null : status;
     if (narrative !== undefined) p.narrative = narrative;
 
-    const url = docToUrl(doc);
+    const dlId = storeDoc(doc);
+    const token = docToToken(doc);
     return {
       content: [{
         type: 'text',
-        text: `✅ Updated period ${period_index}: "${p.label}" (status: ${p.status ?? 'none'})\n\n🔗 Updated URL:\n${url}`,
+        text: `✅ Updated period ${period_index}: "${p.label}" (status: ${p.status ?? 'none'})\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
       }],
     };
   }
@@ -331,16 +384,16 @@ server.registerTool(
 server.registerTool(
   'set_today',
   {
-    description: 'Moves the "today" marker to a specific period and returns an updated deep-link URL.',
+    description: 'Moves the "today" marker to a specific period and returns an updated download link.',
     inputSchema: z.object({
-      doc_url: z.string().describe('The deep-link URL from a previous tool call.'),
+      doc_token: z.string().describe('The doc_token from a previous tool call.'),
       period_index: z.number().int().describe('0-based index of the period to mark as today.'),
     }),
   },
-  async ({ doc_url, period_index }) => {
+  async ({ doc_token, period_index }) => {
     let doc;
-    try { doc = urlToDoc(doc_url); } catch (e) {
-      return { content: [{ type: 'text', text: `Could not decode doc_url: ${e.message}` }], isError: true };
+    try { doc = resolveDoc(doc_token); } catch (e) {
+      return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
     }
 
     if (period_index < 0 || period_index >= doc.periods.length) {
@@ -350,11 +403,12 @@ server.registerTool(
     doc.today = period_index;
     doc.todayOffset = 0;
 
-    const url = docToUrl(doc);
+    const dlId = storeDoc(doc);
+    const token = docToToken(doc);
     return {
       content: [{
         type: 'text',
-        text: `✅ Today marker set to period ${period_index}: "${doc.periods[period_index].label}"\n\n🔗 Updated URL:\n${url}`,
+        text: `✅ Today marker set to period ${period_index}: "${doc.periods[period_index].label}"\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
       }],
     };
   }
@@ -366,6 +420,22 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 app.get('/health', (_req, res) => res.status(200).send('OK'));
+
+// ── Download endpoint ────────────────────────────────────────────────────────
+// Returns the pre-populated self-contained HTML file for the given id.
+// The browser opens it directly — no login, no GitHub Pages needed.
+app.get('/download/:id', (req, res) => {
+  const entry = downloads.get(req.params.id);
+  if (!entry) return res.status(404).send('Link expired or not found. Ask the AI to regenerate the roadmap.');
+  if (entry.expires < Date.now()) {
+    downloads.delete(req.params.id);
+    return res.status(410).send('Link expired. Ask the AI to regenerate the roadmap.');
+  }
+  const title = (entry.doc?.title ?? 'roadmap').replace(/[^a-z0-9_\- ]/gi, '_');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${title}.html"`);
+  res.send(entry.html);
+});
 
 // Map of sessionId → SSEServerTransport (supports multiple concurrent clients)
 const transports = new Map();
@@ -389,6 +459,6 @@ app.post('/messages', async (req, res) => {
 
 app.listen(PORT, () => {
   console.error(`Roadmap MCP server listening on port ${PORT}`);
-  console.error(`Pages URL: ${PAGES_URL}`);
+  console.error(`Host: ${HOST}`);
   console.error(`SSE endpoint: http://localhost:${PORT}/sse`);
 });
