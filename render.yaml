@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: roadmap-mcp-server
+    runtime: node
+    rootDir: .
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PAGES_URL
+        value: https://pages.github.ibm.com/Martin-Burkel/Roadmap-builder
+    plan: free
