@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 
 // ─── Config ────────────────────────────────────────────────────────────────
@@ -414,7 +415,7 @@ server.registerTool(
   }
 );
 
-// ─── Express + SSE transport ─────────────────────────────────────────────────
+// ─── Express + SSE + Streamable-HTTP transports ──────────────────────────────
 const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json());
@@ -422,8 +423,6 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.status(200).send('OK'));
 
 // ── Download endpoint ────────────────────────────────────────────────────────
-// Returns the pre-populated self-contained HTML file for the given id.
-// The browser opens it directly — no login, no GitHub Pages needed.
 app.get('/download/:id', (req, res) => {
   const entry = downloads.get(req.params.id);
   if (!entry) return res.status(404).send('Link expired or not found. Ask the AI to regenerate the roadmap.');
@@ -437,28 +436,47 @@ app.get('/download/:id', (req, res) => {
   res.send(entry.html);
 });
 
-// Map of sessionId → SSEServerTransport (supports multiple concurrent clients)
-const transports = new Map();
+// ── Legacy SSE transport (/sse + /messages) ──────────────────────────────────
+const sseTransports = new Map();
 
 app.get('/sse', async (req, res) => {
   const transport = new SSEServerTransport('/messages', res);
-  transports.set(transport.sessionId, transport);
-  res.on('close', () => transports.delete(transport.sessionId));
+  sseTransports.set(transport.sessionId, transport);
+  res.on('close', () => sseTransports.delete(transport.sessionId));
   await server.connect(transport);
 });
 
 app.post('/messages', async (req, res) => {
   const sessionId = req.query.sessionId;
-  const transport = transports.get(sessionId);
-  if (!transport) {
-    res.status(404).json({ error: 'Session not found' });
+  const transport = sseTransports.get(sessionId);
+  if (!transport) { res.status(404).json({ error: 'Session not found' }); return; }
+  await transport.handlePostMessage(req, res, req.body);
+});
+
+// ── Streamable-HTTP transport (/mcp) — modern MCP clients (Bob, etc.) ────────
+const httpTransports = new Map();
+
+app.all('/mcp', async (req, res) => {
+  const sessionId = req.headers['mcp-session-id'];
+
+  if (req.method === 'POST' && !sessionId) {
+    // New session
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => Math.random().toString(36).slice(2) });
+    httpTransports.set(transport.sessionId, transport);
+    transport.onclose = () => httpTransports.delete(transport.sessionId);
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
     return;
   }
-  await transport.handlePostMessage(req, res, req.body);
+
+  const transport = httpTransports.get(sessionId);
+  if (!transport) { res.status(404).json({ error: 'Session not found' }); return; }
+  await transport.handleRequest(req, res, req.body);
 });
 
 app.listen(PORT, () => {
   console.error(`Roadmap MCP server listening on port ${PORT}`);
   console.error(`Host: ${HOST}`);
-  console.error(`SSE endpoint: http://localhost:${PORT}/sse`);
+  console.error(`SSE endpoint:              http://localhost:${PORT}/sse`);
+  console.error(`Streamable-HTTP endpoint:  http://localhost:${PORT}/mcp`);
 });
