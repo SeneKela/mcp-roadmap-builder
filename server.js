@@ -3,9 +3,11 @@ import cors from 'cors';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { randomUUID } from 'crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 
 // ─── Config ────────────────────────────────────────────────────────────────
@@ -177,32 +179,33 @@ Suggested colors (IBM Carbon palette):
   #da1e28 (red), #c6c6c6 (gray), #262626 (dark)
 `.trim();
 
-// ─── MCP Server ─────────────────────────────────────────────────────────────
-const server = new McpServer({
-  name: 'roadmap-builder',
-  version: '0.1.0',
-});
+// ─── Server Factory ──────────────────────────────────────────────────────────
+function createMcpServer() {
+  const server = new McpServer({
+    name: 'roadmap-builder',
+    version: '0.1.0',
+  });
 
-// ── Tool: get_schema ─────────────────────────────────────────────────────────
-server.registerTool(
-  'get_schema',
-  {
-    description: 'Returns the full JSON schema for the Roadmap Builder doc format. Call this first before calling generate_roadmap so you understand the exact shape required.',
-    inputSchema: z.object({}),
-  },
-  async () => ({
-    content: [{
-      type: 'text',
-      text: DOC_SCHEMA + '\n\nOnce you have read the schema, call generate_roadmap with a doc_json argument containing a valid doc object.',
-    }],
-  })
-);
+  // ── Tool: get_schema ─────────────────────────────────────────────────────────
+  server.registerTool(
+    'get_schema',
+    {
+      description: 'Returns the full JSON schema for the Roadmap Builder doc format. Call this first before calling generate_roadmap so you understand the exact shape required.',
+      inputSchema: z.object({}),
+    },
+    async () => ({
+      content: [{
+        type: 'text',
+        text: DOC_SCHEMA + '\n\nOnce you have read the schema, call generate_roadmap with a doc_json argument containing a valid doc object.',
+      }],
+    })
+  );
 
-// ── Tool: generate_roadmap ───────────────────────────────────────────────────
-server.registerTool(
-  'generate_roadmap',
-  {
-    description: `Validates a roadmap doc JSON, bakes it into a self-contained HTML file, and returns a download link.
+  // ── Tool: generate_roadmap ───────────────────────────────────────────────────
+  server.registerTool(
+    'generate_roadmap',
+    {
+      description: `Validates a roadmap doc JSON, bakes it into a self-contained HTML file, and returns a download link.
 
 HOW TO USE THIS TOOL (two-step pattern):
 1. First call get_schema to learn the exact doc JSON format.
@@ -216,204 +219,207 @@ The doc JSON must follow the schema exactly. Common mistakes:
 - element laneId must match a lane id in the lanes array
 - span.start and span.end must be valid period indices (0 to periods.length-1)
 - every element needs at least a title block: [{"type":"title","text":"..."}]`,
-    inputSchema: z.object({
-      doc_json: z.string().describe('The complete roadmap doc as a JSON string. Must conform to the schema from get_schema.'),
-    }),
-  },
-  async ({ doc_json }) => {
-    let doc;
-    try {
-      doc = JSON.parse(doc_json);
-    } catch (e) {
-      return {
-        content: [{ type: 'text', text: `Invalid JSON: ${e.message}` }],
-        isError: true,
-      };
-    }
+      inputSchema: z.object({
+        doc_json: z.string().describe('The complete roadmap doc as a JSON string. Must conform to the schema from get_schema.'),
+      }),
+    },
+    async ({ doc_json }) => {
+      let doc;
+      try {
+        doc = JSON.parse(doc_json);
+      } catch (e) {
+        return {
+          content: [{ type: 'text', text: `Invalid JSON: ${e.message}` }],
+          isError: true,
+        };
+      }
 
-    const result = validateDoc(doc);
-    if (!result.ok) {
+      const result = validateDoc(doc);
+      if (!result.ok) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Validation failed:\n${result.errors.map(e => `  • ${e}`).join('\n')}\n\nFix these issues and call generate_roadmap again.`,
+          }],
+          isError: true,
+        };
+      }
+
+      const id = storeDoc(doc);
+      const url = downloadUrl(id);
+      const token = docToToken(doc);
       return {
         content: [{
           type: 'text',
-          text: `Validation failed:\n${result.errors.map(e => `  • ${e}`).join('\n')}\n\nFix these issues and call generate_roadmap again.`,
+          text: `✅ Roadmap ready!\n\nTitle: ${doc.title}\nPeriods: ${doc.periods.length}\nLanes: ${doc.lanes.length}\nElements: ${doc.elements.length}\n\n📥 Download & open (link valid 10 min):\n${url}\n\nThe file is a fully self-contained HTML — open it in any browser, no login needed. You can export to PDF/PPTX from inside the app.\n\n🔑 doc_token (pass to add_lane / add_element / update_period / set_today):\n${token}`,
         }],
-        isError: true,
       };
     }
+  );
 
-    const id = storeDoc(doc);
-    const url = downloadUrl(id);
-    const token = docToToken(doc);
-    return {
-      content: [{
-        type: 'text',
-        text: `✅ Roadmap ready!\n\nTitle: ${doc.title}\nPeriods: ${doc.periods.length}\nLanes: ${doc.lanes.length}\nElements: ${doc.elements.length}\n\n📥 Download & open (link valid 10 min):\n${url}\n\nThe file is a fully self-contained HTML — open it in any browser, no login needed. You can export to PDF/PPTX from inside the app.\n\n🔑 doc_token (pass to add_lane / add_element / update_period / set_today):\n${token}`,
-      }],
-    };
-  }
-);
+  // ── Tool: add_lane ───────────────────────────────────────────────────────────
+  server.registerTool(
+    'add_lane',
+    {
+      description: 'Adds a new swim-lane to an existing roadmap and returns an updated download link.',
+      inputSchema: z.object({
+        doc_token: z.string().describe('The doc_token returned by generate_roadmap, add_lane, add_element, update_period, or set_today.'),
+        lane_title: z.string().describe('Display title for the new lane.'),
+        color: z.string().optional().describe('Hex color e.g. "#0f62fe". Defaults to IBM blue.'),
+        kind: z.enum(['bars', 'cards']).optional().describe('"bars" for bar/umbrella/milestone elements, "cards" for card elements. Defaults to "bars".'),
+      }),
+    },
+    async ({ doc_token, lane_title, color = '#0f62fe', kind = 'bars' }) => {
+      let doc;
+      try { doc = resolveDoc(doc_token); } catch (e) {
+        return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
+      }
 
-// ── Tool: add_lane ───────────────────────────────────────────────────────────
-server.registerTool(
-  'add_lane',
-  {
-    description: 'Adds a new swim-lane to an existing roadmap and returns an updated download link.',
-    inputSchema: z.object({
-      doc_token: z.string().describe('The doc_token returned by generate_roadmap, add_lane, add_element, update_period, or set_today.'),
-      lane_title: z.string().describe('Display title for the new lane.'),
-      color: z.string().optional().describe('Hex color e.g. "#0f62fe". Defaults to IBM blue.'),
-      kind: z.enum(['bars', 'cards']).optional().describe('"bars" for bar/umbrella/milestone elements, "cards" for card elements. Defaults to "bars".'),
-    }),
-  },
-  async ({ doc_token, lane_title, color = '#0f62fe', kind = 'bars' }) => {
-    let doc;
-    try { doc = resolveDoc(doc_token); } catch (e) {
-      return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
+      const id = nid('lane');
+      doc.lanes.push({ id, title: lane_title, color, kind, pastTint: false });
+      if (doc.sections.length > 0) doc.sections[0].laneIds.push(id);
+
+      const dlId = storeDoc(doc);
+      const token = docToToken(doc);
+      return {
+        content: [{
+          type: 'text',
+          text: `✅ Added lane "${lane_title}" (id: ${id})\n\nLanes now: ${doc.lanes.map(l => l.title).join(', ')}\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
+        }],
+      };
     }
+  );
 
-    const id = nid('lane');
-    doc.lanes.push({ id, title: lane_title, color, kind, pastTint: false });
-    if (doc.sections.length > 0) doc.sections[0].laneIds.push(id);
+  // ── Tool: add_element ────────────────────────────────────────────────────────
+  server.registerTool(
+    'add_element',
+    {
+      description: 'Adds a new element (bar, card, umbrella, or milestone) to a lane and returns an updated download link.',
+      inputSchema: z.object({
+        doc_token: z.string().describe('The doc_token from a previous tool call.'),
+        lane_id: z.string().describe('ID of the lane to add the element to. Use add_lane first if the lane does not exist yet.'),
+        variant: z.enum(['bar', 'umbrella', 'card', 'milestone']).describe('Element shape. bar = horizontal bar, umbrella = spanning header bar, card = tall card with rich content, milestone = diamond marker.'),
+        title: z.string().describe('Title text shown on the element.'),
+        period_start: z.number().int().describe('Start period index (0-based, inclusive).'),
+        period_end: z.number().int().describe('End period index (0-based, inclusive). Equal to period_start for single-period elements.'),
+        status: z.string().optional().describe('completed | on-target | at-risk | delayed | not-started | cancelled. Omit for no status.'),
+        subtitle: z.string().optional().describe('Subtitle text (card variant only).'),
+      }),
+    },
+    async ({ doc_token, lane_id, variant, title, period_start, period_end, status, subtitle }) => {
+      let doc;
+      try { doc = resolveDoc(doc_token); } catch (e) {
+        return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
+      }
 
-    const dlId = storeDoc(doc);
-    const token = docToToken(doc);
-    return {
-      content: [{
-        type: 'text',
-        text: `✅ Added lane "${lane_title}" (id: ${id})\n\nLanes now: ${doc.lanes.map(l => l.title).join(', ')}\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
-      }],
-    };
-  }
-);
+      if (!doc.lanes.find(l => l.id === lane_id)) {
+        return { content: [{ type: 'text', text: `Lane "${lane_id}" not found. Available lanes: ${doc.lanes.map(l => `${l.id} (${l.title})`).join(', ')}` }], isError: true };
+      }
+      if (period_start < 0 || period_end >= doc.periods.length || period_start > period_end) {
+        return { content: [{ type: 'text', text: `period_start/end out of range. Periods: 0–${doc.periods.length - 1}` }], isError: true };
+      }
 
-// ── Tool: add_element ────────────────────────────────────────────────────────
-server.registerTool(
-  'add_element',
-  {
-    description: 'Adds a new element (bar, card, umbrella, or milestone) to a lane and returns an updated download link.',
-    inputSchema: z.object({
-      doc_token: z.string().describe('The doc_token from a previous tool call.'),
-      lane_id: z.string().describe('ID of the lane to add the element to. Use add_lane first if the lane does not exist yet.'),
-      variant: z.enum(['bar', 'umbrella', 'card', 'milestone']).describe('Element shape. bar = horizontal bar, umbrella = spanning header bar, card = tall card with rich content, milestone = diamond marker.'),
-      title: z.string().describe('Title text shown on the element.'),
-      period_start: z.number().int().describe('Start period index (0-based, inclusive).'),
-      period_end: z.number().int().describe('End period index (0-based, inclusive). Equal to period_start for single-period elements.'),
-      status: z.string().optional().describe('completed | on-target | at-risk | delayed | not-started | cancelled. Omit for no status.'),
-      subtitle: z.string().optional().describe('Subtitle text (card variant only).'),
-    }),
-  },
-  async ({ doc_token, lane_id, variant, title, period_start, period_end, status, subtitle }) => {
-    let doc;
-    try { doc = resolveDoc(doc_token); } catch (e) {
-      return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
+      const blocks = [{ type: 'title', text: title }];
+      if (subtitle && variant === 'card') blocks.push({ type: 'subtitle', text: subtitle });
+
+      const el = {
+        id: nid('e'),
+        laneId: lane_id,
+        variant,
+        span: { start: period_start, end: period_end },
+        status: VALID_STATUSES.has(status) ? status : null,
+        row: 'auto',
+        meta: { owner: '', tags: [], link: '' },
+        blocks,
+      };
+      doc.elements.push(el);
+
+      const dlId = storeDoc(doc);
+      const token = docToToken(doc);
+      return {
+        content: [{
+          type: 'text',
+          text: `✅ Added ${variant} "${title}" to lane "${lane_id}" (periods ${period_start}–${period_end})\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
+        }],
+      };
     }
+  );
 
-    if (!doc.lanes.find(l => l.id === lane_id)) {
-      return { content: [{ type: 'text', text: `Lane "${lane_id}" not found. Available lanes: ${doc.lanes.map(l => `${l.id} (${l.title})`).join(', ')}` }], isError: true };
+  // ── Tool: update_period ──────────────────────────────────────────────────────
+  server.registerTool(
+    'update_period',
+    {
+      description: 'Updates the label, status, or narrative of a time period and returns an updated download link.',
+      inputSchema: z.object({
+        doc_token: z.string().describe('The doc_token from a previous tool call.'),
+        period_index: z.number().int().describe('0-based index of the period to update.'),
+        label: z.string().optional().describe('New label text e.g. "Q2 2025".'),
+        status: z.string().optional().describe('completed | on-target | at-risk | delayed | not-started | cancelled | null'),
+        narrative: z.string().optional().describe('Prose description shown in the story panel for this period.'),
+      }),
+    },
+    async ({ doc_token, period_index, label, status, narrative }) => {
+      let doc;
+      try { doc = resolveDoc(doc_token); } catch (e) {
+        return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
+      }
+
+      if (period_index < 0 || period_index >= doc.periods.length) {
+        return { content: [{ type: 'text', text: `period_index ${period_index} out of range. Valid: 0–${doc.periods.length - 1}` }], isError: true };
+      }
+
+      const p = doc.periods[period_index];
+      if (label !== undefined) p.label = label;
+      if (status !== undefined) p.status = status === 'null' ? null : status;
+      if (narrative !== undefined) p.narrative = narrative;
+
+      const dlId = storeDoc(doc);
+      const token = docToToken(doc);
+      return {
+        content: [{
+          type: 'text',
+          text: `✅ Updated period ${period_index}: "${p.label}" (status: ${p.status ?? 'none'})\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
+        }],
+      };
     }
-    if (period_start < 0 || period_end >= doc.periods.length || period_start > period_end) {
-      return { content: [{ type: 'text', text: `period_start/end out of range. Periods: 0–${doc.periods.length - 1}` }], isError: true };
+  );
+
+  // ── Tool: set_today ──────────────────────────────────────────────────────────
+  server.registerTool(
+    'set_today',
+    {
+      description: 'Moves the "today" marker to a specific period and returns an updated download link.',
+      inputSchema: z.object({
+        doc_token: z.string().describe('The doc_token from a previous tool call.'),
+        period_index: z.number().int().describe('0-based index of the period to mark as today.'),
+      }),
+    },
+    async ({ doc_token, period_index }) => {
+      let doc;
+      try { doc = resolveDoc(doc_token); } catch (e) {
+        return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
+      }
+
+      if (period_index < 0 || period_index >= doc.periods.length) {
+        return { content: [{ type: 'text', text: `period_index ${period_index} out of range. Valid: 0–${doc.periods.length - 1}` }], isError: true };
+      }
+
+      doc.today = period_index;
+      doc.todayOffset = 0;
+
+      const dlId = storeDoc(doc);
+      const token = docToToken(doc);
+      return {
+        content: [{
+          type: 'text',
+          text: `✅ Today marker set to period ${period_index}: "${doc.periods[period_index].label}"\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
+        }],
+      };
     }
+  );
 
-    const blocks = [{ type: 'title', text: title }];
-    if (subtitle && variant === 'card') blocks.push({ type: 'subtitle', text: subtitle });
-
-    const el = {
-      id: nid('e'),
-      laneId: lane_id,
-      variant,
-      span: { start: period_start, end: period_end },
-      status: VALID_STATUSES.has(status) ? status : null,
-      row: 'auto',
-      meta: { owner: '', tags: [], link: '' },
-      blocks,
-    };
-    doc.elements.push(el);
-
-    const dlId = storeDoc(doc);
-    const token = docToToken(doc);
-    return {
-      content: [{
-        type: 'text',
-        text: `✅ Added ${variant} "${title}" to lane "${lane_id}" (periods ${period_start}–${period_end})\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
-      }],
-    };
-  }
-);
-
-// ── Tool: update_period ──────────────────────────────────────────────────────
-server.registerTool(
-  'update_period',
-  {
-    description: 'Updates the label, status, or narrative of a time period and returns an updated download link.',
-    inputSchema: z.object({
-      doc_token: z.string().describe('The doc_token from a previous tool call.'),
-      period_index: z.number().int().describe('0-based index of the period to update.'),
-      label: z.string().optional().describe('New label text e.g. "Q2 2025".'),
-      status: z.string().optional().describe('completed | on-target | at-risk | delayed | not-started | cancelled | null'),
-      narrative: z.string().optional().describe('Prose description shown in the story panel for this period.'),
-    }),
-  },
-  async ({ doc_token, period_index, label, status, narrative }) => {
-    let doc;
-    try { doc = resolveDoc(doc_token); } catch (e) {
-      return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
-    }
-
-    if (period_index < 0 || period_index >= doc.periods.length) {
-      return { content: [{ type: 'text', text: `period_index ${period_index} out of range. Valid: 0–${doc.periods.length - 1}` }], isError: true };
-    }
-
-    const p = doc.periods[period_index];
-    if (label !== undefined) p.label = label;
-    if (status !== undefined) p.status = status === 'null' ? null : status;
-    if (narrative !== undefined) p.narrative = narrative;
-
-    const dlId = storeDoc(doc);
-    const token = docToToken(doc);
-    return {
-      content: [{
-        type: 'text',
-        text: `✅ Updated period ${period_index}: "${p.label}" (status: ${p.status ?? 'none'})\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
-      }],
-    };
-  }
-);
-
-// ── Tool: set_today ──────────────────────────────────────────────────────────
-server.registerTool(
-  'set_today',
-  {
-    description: 'Moves the "today" marker to a specific period and returns an updated download link.',
-    inputSchema: z.object({
-      doc_token: z.string().describe('The doc_token from a previous tool call.'),
-      period_index: z.number().int().describe('0-based index of the period to mark as today.'),
-    }),
-  },
-  async ({ doc_token, period_index }) => {
-    let doc;
-    try { doc = resolveDoc(doc_token); } catch (e) {
-      return { content: [{ type: 'text', text: `Could not decode doc_token: ${e.message}` }], isError: true };
-    }
-
-    if (period_index < 0 || period_index >= doc.periods.length) {
-      return { content: [{ type: 'text', text: `period_index ${period_index} out of range. Valid: 0–${doc.periods.length - 1}` }], isError: true };
-    }
-
-    doc.today = period_index;
-    doc.todayOffset = 0;
-
-    const dlId = storeDoc(doc);
-    const token = docToToken(doc);
-    return {
-      content: [{
-        type: 'text',
-        text: `✅ Today marker set to period ${period_index}: "${doc.periods[period_index].label}"\n\n📥 Updated file:\n${downloadUrl(dlId)}\n\n🔑 doc_token:\n${token}`,
-      }],
-    };
-  }
-);
+  return server;
+}
 
 // ─── Express + SSE + Streamable-HTTP transports ──────────────────────────────
 const app = express();
@@ -436,42 +442,110 @@ app.get('/download/:id', (req, res) => {
   res.send(entry.html);
 });
 
-// ── Legacy SSE transport (/sse + /messages) ──────────────────────────────────
-const sseTransports = new Map();
+// ── Session store for all MCP transports ─────────────────────────────────────
+const MAX_SESSIONS = 1000;
+const sessions = new Map();
 
+// ── Streamable-HTTP transport (/mcp) — modern MCP clients (Bob, etc.) ────────
+app.all('/mcp', async (req, res) => {
+  try {
+    const sessionId = req.headers['mcp-session-id'];
+    const session = sessionId ? sessions.get(sessionId) : undefined;
+    let transport;
+
+    if (session) {
+      if (session.transport instanceof StreamableHTTPServerTransport) {
+        transport = session.transport;
+        session.lastActive = Date.now();
+      } else {
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: { code: -32000, message: 'Bad Request: Session exists but uses a different transport protocol' },
+          id: null,
+        });
+        return;
+      }
+    } else if (!sessionId && req.method === 'POST' && isInitializeRequest(req.body)) {
+      if (sessions.size >= MAX_SESSIONS) {
+        res.status(503).json({ jsonrpc: '2.0', error: { code: -32000, message: 'Too many open sessions' }, id: null });
+        return;
+      }
+
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sid) => {
+          sessions.set(sid, { transport, lastActive: Date.now() });
+        },
+      });
+
+      transport.onclose = () => {
+        const sid = transport.sessionId;
+        if (sid && sessions.has(sid)) {
+          sessions.delete(sid);
+        }
+      };
+
+      const server = createMcpServer();
+      await server.connect(transport);
+    } else if (sessionId) {
+      res.status(404).json({ jsonrpc: '2.0', error: { code: -32001, message: 'Session not found' }, id: null });
+      return;
+    } else {
+      res.status(400).json({
+        jsonrpc: '2.0',
+        error: { code: -32000, message: 'Bad Request: No valid session ID provided' },
+        id: null,
+      });
+      return;
+    }
+
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error('Error handling /mcp request:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: '2.0',
+        error: { code: -32603, message: 'Internal server error' },
+        id: null,
+      });
+    }
+  }
+});
+
+// ── Legacy SSE transport (/sse + /messages) ──────────────────────────────────
 app.get('/sse', async (req, res) => {
-  const transport = new SSEServerTransport('/messages', res);
-  sseTransports.set(transport.sessionId, transport);
-  res.on('close', () => sseTransports.delete(transport.sessionId));
-  await server.connect(transport);
+  try {
+    if (sessions.size >= MAX_SESSIONS) {
+      res.status(503).send('Too many open sessions');
+      return;
+    }
+    const transport = new SSEServerTransport('/messages', res);
+    sessions.set(transport.sessionId, { transport, lastActive: Date.now() });
+    transport.onclose = () => {
+      sessions.delete(transport.sessionId);
+    };
+    const server = createMcpServer();
+    await server.connect(transport);
+  } catch (error) {
+    console.error('Error in /sse:', error);
+    if (!res.headersSent) res.status(500).send('Internal server error');
+  }
 });
 
 app.post('/messages', async (req, res) => {
-  const sessionId = req.query.sessionId;
-  const transport = sseTransports.get(sessionId);
-  if (!transport) { res.status(404).json({ error: 'Session not found' }); return; }
-  await transport.handlePostMessage(req, res, req.body);
-});
-
-// ── Streamable-HTTP transport (/mcp) — modern MCP clients (Bob, etc.) ────────
-const httpTransports = new Map();
-
-app.all('/mcp', async (req, res) => {
-  const sessionId = req.headers['mcp-session-id'];
-
-  if (req.method === 'POST' && !sessionId) {
-    // New session
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: () => Math.random().toString(36).slice(2) });
-    httpTransports.set(transport.sessionId, transport);
-    transport.onclose = () => httpTransports.delete(transport.sessionId);
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-    return;
+  try {
+    const sessionId = req.query.sessionId;
+    const session = sessionId ? sessions.get(sessionId) : undefined;
+    if (session && session.transport instanceof SSEServerTransport) {
+      session.lastActive = Date.now();
+      await session.transport.handlePostMessage(req, res, req.body);
+    } else {
+      res.status(404).json({ error: 'Session not found' });
+    }
+  } catch (error) {
+    console.error('Error in /messages:', error);
+    if (!res.headersSent) res.status(500).send('Internal server error');
   }
-
-  const transport = httpTransports.get(sessionId);
-  if (!transport) { res.status(404).json({ error: 'Session not found' }); return; }
-  await transport.handleRequest(req, res, req.body);
 });
 
 app.listen(PORT, () => {
