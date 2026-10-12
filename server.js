@@ -12,11 +12,11 @@ import { z } from 'zod';
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT ?? 3000;
-const HOST = (process.env.RENDER_EXTERNAL_URL ?? `http://localhost:${PORT}`).replace(/\/$/, '');
+const HOST = (process.env.EXTERNAL_URL ?? `http://localhost:${PORT}`).replace(/\/$/, '');
 
 // ─── Load app template at startup ──────────────────────────────────────────
-// index.html lives one directory up (repo root). In production on Render the
-// repo root is the mcp-server/ folder, so we fall back gracefully.
+// index.html lives one directory up (repo root). When deployed with the
+// repo root as mcp-server/ it falls back gracefully.
 const __dir = dirname(fileURLToPath(import.meta.url));
 let APP_HTML;
 for (const candidate of [join(__dir, '..', 'index.html'), join(__dir, 'index.html')]) {
