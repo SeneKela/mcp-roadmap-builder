@@ -44,10 +44,10 @@ svg{display:block;flex:none}
 .zoom{min-width:40px;text-align:center;color:var(--t2)}
 .tb-primary{height:28px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:4px;background:#0f62fe;color:#fff;font-weight:500;font-size:11px}
 .tb-primary:hover{background:#0353e9}
-.tb-primary.on{background:#003cbd}
-.tb-primary.on:hover{background:#0030a4}
-.tb-secondary{height:28px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:4px;background:transparent;color:var(--t1);font-weight:500;font-size:11px;border:1px solid var(--ins-border-strong)}
-.tb-secondary:hover{background:var(--ins-field)}
+.tb-primary.on{background:#002d9c;color:#fff}
+.tb-primary.on:hover{background:#002d9c}
+.tb-tertiary{height:28px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:4px;background:transparent;color:#0f62fe;font-weight:500;font-size:11px;border:1px solid #0f62fe}
+.tb-tertiary:hover{background:#0f62fe;color:#fff}
 
 .main{display:grid;grid-template-columns:232px 1fr 264px;min-height:0;transition:grid-template-columns .18s ease;position:relative}
 .main.left-collapsed{grid-template-columns:0px 1fr 264px}
@@ -84,9 +84,28 @@ svg{display:block;flex:none}
 .steps button{flex:1;height:3px;border-radius:2px;background:var(--ins-border)}
 .steps button.on{background:#161616}
 .story .nav{display:flex;gap:6px}
+.story .shead{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:24px}
+.story .tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.story .sdiv{height:1px;background:var(--ins-border);margin:20px 0 12px}
+.story .srow{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:6px}
+.story .sgroup{color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:10px;margin:14px 0 6px}
+.story .sw{width:8px;height:8px;border-radius:2px;flex:none}
+.story .felem{display:flex;align-items:center;gap:6px;min-height:24px}
+.story .snote{margin-top:10px;padding:8px 10px;background:var(--ins-section);border-left:2px solid var(--ins-border-strong);font-size:11px;line-height:16px;color:#3d3d40}
+.story .snote b{display:block;font-weight:600;color:var(--t1)}
+.btn.sm{height:24px;padding:0 8px;font-size:11px}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.danger:hover:not(:disabled){background:#ffd7d9;color:#a2191f}
 .btn{height:28px;padding:0 10px;border-radius:4px;background:var(--ins-field);font-weight:500;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{background:var(--ins-field-hover)}
 .btn.dark{background:#161616;color:#fff}
+.btn.dark:hover{background:#393939}
+.btn.outline{background:transparent;box-shadow:inset 0 0 0 1px var(--ins-border-strong)}
+.btn.outline:hover{background:var(--ins-field)}
+.btn.ghost{background:transparent;color:var(--t2);padding:0 6px}
+.srow > .btn.ghost:first-child{margin-left:-6px}
+.btn.ghost:hover:not(:disabled){background:var(--ins-field);color:var(--t1)}
+.btn.ghost.danger:hover:not(:disabled){background:#ffd7d9;color:#a2191f}
 
 /* board */
 .sizer{padding:32px;display:inline-block}
@@ -124,13 +143,15 @@ svg{display:block;flex:none}
 .s-card .b-title{font-size:15px;line-height:18px;padding-right:20px}
 .b-sub{font-size:15px;line-height:18px;margin-top:-6px}
 .b-chip{align-self:flex-start;font-size:9px;line-height:14px;padding:0 6px;border-radius:7px;margin-top:2px}
+.s-bar .b-chip,.s-thin .b-chip{flex-basis:100%}
 .chip-neutral{background:#c6c6c6;color:#161616}.chip-inverse{background:#161616;color:#fff;box-shadow:0 0 0 1px #6f6f6f}
 .b-metrics{margin-top:auto;font-size:10px;line-height:14px;opacity:.9}
 .b-entries{display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:4px;font-size:9.5px;line-height:12px;margin-top:auto}
 .b-entries b{display:block;font-weight:400}.b-entries span{opacity:.75}
 .b-text{font-size:10px;line-height:13px;opacity:.85}
-.b-owner{display:flex;align-items:center;gap:4px;font-size:9.5px;opacity:.85}
-.b-owner i{width:14px;height:14px;border-radius:50%;background:currentColor;opacity:.25}
+.b-owner{display:flex;align-items:center;gap:4px;font-size:9.5px;min-width:0}
+.b-owner i{flex:none;width:14px;height:14px;border-radius:50%;display:grid;place-items:center;font-size:6.5px;font-weight:600;line-height:1;font-style:normal;letter-spacing:0;background:color-mix(in srgb,currentColor 22%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 40%,transparent)}
+.b-owner span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85}
 .b-prog{height:3px;border-radius:2px;background:rgba(127,127,127,.35);width:100%;overflow:hidden}
 .b-prog i{display:block;height:100%;background:currentColor}
 .s-bar .b-prog{width:48px;align-self:center}
@@ -235,6 +256,7 @@ pre.json{background:var(--ins-section);border-radius:4px;padding:8px;font-family
 .bgrid button[disabled]{opacity:.3;cursor:default;background:none}
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#161616;color:#fff;padding:6px 12px;border-radius:4px;opacity:0;transition:opacity .15s;pointer-events:none;z-index:60}
 .toast.on{opacity:1}
+#credits{position:fixed;bottom:10px;right:12px;font-size:10px;color:#a8a8a8;letter-spacing:.04em;pointer-events:none;z-index:50;font-family:inherit}
 /* canvas fullscreen */
 .canvas-fs .top,.canvas-fs .left,.canvas-fs .left-toggle,.canvas-fs .ins{display:none!important}
 .canvas-fs .app{grid-template-rows:1fr}
@@ -258,36 +280,38 @@ pre.json{background:var(--ins-section);border-radius:4px;padding:8px;font-family
 <body>
 <div class="app">
   <header class="top">
-    <div class="top-title"><div class="brand"><span class="brand-ibm">IBM <span>Roadmap Builder</span></span><small id="docTitle"></small></div></div>
+    <div class="top-title"><div class="brand"><span class="brand-ibm">IBM <span>Roadmap Builder</span></span></div></div>
     <div class="top-bar">
     <div class="tb-title">
       <span class="tb-title-text" id="tbDocTitle" contenteditable="true" spellcheck="false" role="textbox" aria-label="Roadmap title"></span>
       <span class="tsep"></span>
-      <button class="tb" id="templateBtn" title="Templates"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1"/><rect x="9" y="9" width="5.5" height="5.5" rx="1"/></svg>Templates<svg width="8" height="8" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      <button class="tb" id="templateBtn" title="Templates"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v5H2V2zm1 1v3h3V3H3zm6-1h5v5H9V2zm1 1v3h3V3h-3zM2 9h5v5H2V9zm1 1v3h3v-3H3zm6-1h5v5H9V9zm1 1v3h3v-3h-3z"/></svg>Templates<svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor"><path d="M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z"/></svg></button>
     </div>
     <div class="tools">
-      <button class="tb" data-add="bar" title="Add bar (B)"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="5.5" width="13" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>Bar</button>
-      <button class="tb" data-add="umbrella" title="Add umbrella (U)"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="1.5" y="3" width="13" height="3" fill="currentColor"/><rect x="3.5" y="8.5" width="11" height="4" fill="none" stroke="currentColor" stroke-opacity=".5"/></svg>Umbrella</button>
-      <button class="tb" data-add="card" title="Add card (C)"><svg width="16" height="16" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 5h5" stroke="currentColor"/></svg>Card</button>
-      <button class="tb" data-add="milestone" title="Add milestone (M)"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2.5L13.5 8 8 13.5 2.5 8z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>Milestone</button>
+      <button class="tb" data-add="bar" title="Add bar (B)"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M28,26H4c-1.1,0-2-.9-2-2V8c0-1.1.9-2,2-2h24c1.1,0,2,.9,2,2v16c0,1.1-.9,2-2,2ZM4,8h0v16h24V8H4Z"/></svg>Bar</button>
+      <button class="tb" data-add="umbrella" title="Add umbrella (U)"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M28,21H4a2.0021,2.0021,0,0,1-2-2V13a2.0021,2.0021,0,0,1,2-2H28a2.0021,2.0021,0,0,1,2,2v6A2.0021,2.0021,0,0,1,28,21ZM4,13v6H28V13Z"/><rect x="6" y="15" width="14" height="2"/></svg>Umbrella</button>
+      <button class="tb" data-add="card" title="Add card (C)"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M28,4H4A2,2,0,0,0,2,6V26a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V6A2,2,0,0,0,28,4Zm0,2v6H4V6ZM4,26V14H28V26Z"/></svg>Card</button>
+      <button class="tb" data-add="milestone" title="Add milestone (M)"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M24.5857,6.5859A1.9865,1.9865,0,0,0,23.1714,6H16V2H14V6H6A2.0025,2.0025,0,0,0,4,8v6a2.0025,2.0025,0,0,0,2,2h8V30h2V16h7.1714a1.9865,1.9865,0,0,0,1.4143-.5859L29,11ZM23.1714,14H6V8H23.1716l3,3Z"/></svg>Milestone</button>
       <span class="tsep"></span>
-      <button class="tb" id="addLane" title="Add lane"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h6M12 10v4M10 12h4" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>Lane</button>
+      <button class="tb" id="addLane" title="Add lane"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M23,30h-2v-6h-6v-2h6v-6h2v6h6v2h-6v6ZM13,28H5c-1.103,0-2-.8975-2-2V4c0-1.103.897-2,2-2h16c1.1025,0,2,.897,2,2v8H5v6h8v2H5v6h8v2ZM5,10h16v-6H5v6ZM8,6c-.5523,0-1,.4477-1,1s.4477,1,1,1,1-.4477,1-1-.4477-1-1-1ZM8,14c-.5523,0-1,.4477-1,1s.4477,1,1,1,1-.4477,1-1-.4477-1-1-1ZM8,22c-.5523,0-1,.4477-1,1s.4477,1,1,1,1-.4477,1-1-.4477-1-1-1Z"/></svg>Lane</button>
     </div>
     <div class="right-tools">
-      <button class="tb" id="undoBtn" title="Undo ⌘Z"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M5 3.5L2 6.5l3 3M2 6.5h7.5a4 4 0 010 8H7" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
-      <button class="tb" id="redoBtn" title="Redo ⇧⌘Z"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M11 3.5l3 3-3 3M14 6.5H6.5a4 4 0 000 8H9" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>
+      <button class="tb" id="undoBtn" title="Undo ⌘Z" style="justify-content:center;padding:0;width:30px;min-width:30px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 3.5L2 6.5l3 3M2 6.5h7.5a4 4 0 010 8H7"/></svg></button>
+      <button class="tb" id="redoBtn" title="Redo ⇧⌘Z" style="justify-content:center;padding:0;width:30px;min-width:30px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M11 3.5l3 3-3 3M14 6.5H6.5a4 4 0 000 8H9"/></svg></button>
       <span class="tsep"></span>
-      <button class="tb" id="zOut">−</button><span class="zoom mono" id="zLbl">80%</span><button class="tb" id="zIn">+</button>
-      <button class="tb" id="exportBtn" title="Export"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 2v8M4.5 6.5L8 10l3.5-3.5M2.5 13.5h11" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>Export</button>
+      <button class="tb" id="zOut" title="Zoom out" style="justify-content:center;padding:0;width:28px;min-width:28px"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3 7.5h10v1H3z"/></svg></button><span class="zoom mono" id="zLbl">80%</span><button class="tb" id="zIn" title="Zoom in" style="justify-content:center;padding:0;width:28px;min-width:28px"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3v4H4v1h4v4h1V8h4V7H9V3z"/></svg></button>
+      <button class="tb" id="importBtn" title="Import JSON"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L3 6l.7.7L7.2 3.2V11h1V3.2l3.5 3.5.7-.7L8 1zM2 13h12v1H2z"/></svg>Import</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button class="tb" id="exportBtn" title="Export"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 11l5-5-.7-.7L8.8 8.8V1h-1v7.8L4.3 5.3l-.7.7 5 5zM2 13h12v1H2z"/></svg>Export</button>
       <span class="tsep"></span>
-      <button class="tb-primary" id="storyBtn" title="Story mode"><svg width="14" height="14" viewBox="0 0 16 16"><rect x="1.5" y="2.5" width="13" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 5v4l3.5-2z" fill="currentColor"/><path d="M5 14h6" stroke="currentColor"/></svg>Story</button>
-      <button class="tb-secondary" id="fullscreenBtn" title="Fullscreen"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 5.5V2.5h3M11 2.5h3v3M14 10.5v3h-3M5 13.5H2v-3"/></svg>Fullscreen</button>
+      <button class="tb-primary" id="storyBtn" title="Story mode"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><polygon points="13 11 13 21 21 16 13 11"/><path d="m28,6H4c-1.103,0-2,.8975-2,2v16c0,1.1025.897,2,2,2h24c1.103,0,2-.8975,2-2V8c0-1.1025-.897-2-2-2Zm0,18H4V8h24v16Z"/></svg>Story</button>
+      <button class="tb-tertiary" id="fullscreenBtn" title="Fullscreen"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><polygon points="22 16 24 16 24 8 16 8 16 10 22 10 22 16"/><polygon points="8 24 16 24 16 22 10 22 10 16 8 16 8 24"/><path d="M26,28H6a2.0023,2.0023,0,0,1-2-2V6A2.0023,2.0023,0,0,1,6,4H26a2.0023,2.0023,0,0,1,2,2V26A2.0023,2.0023,0,0,1,26,28ZM6,6V26H26.0012L26,6Z"/></svg>Fullscreen</button>
     </div>
     </div>
   </header>
   <div class="main" id="main">
     <aside class="left" id="left"></aside>
-    <button class="left-toggle" id="leftToggle" title="Collapse panel"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="left-toggle" id="leftToggle" title="Collapse panel"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13L5 8l5-5"/></svg></button>
     <main class="stage" id="stage"><div class="sizer" id="sizer"><div class="board" id="board"></div></div></main>
     <aside class="ins" id="ins"></aside>
   </div>
@@ -325,29 +349,30 @@ const STATUSES = {
 function statusIcon(id, s=14){
   const w = `width="${s}" height="${s}" viewBox="0 0 16 16"`;
   switch(id){
-    case 'completed': return `<svg ${w}><circle cx="8" cy="8" r="7" fill="#24a148"/><path d="M4.7 8.2l2.2 2.2 4.4-4.5" stroke="#fff" stroke-width="1.6" fill="none"/></svg>`;
+    case 'completed': return `<svg ${w}><path fill="#24a148" d="M8 1C4.1 1 1 4.1 1 8s3.1 7 7 7 7-3.1 7-7-3.1-7-7-7zm-1 10.4L3.6 8l1.1-1.1 2.3 2.3 4.8-4.8 1.1 1.1-5.9 5.9z"/></svg>`;
     case 'on-target': return `<svg ${w}><path d="M13.3 8A5.3 5.3 0 1 1 8 2.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 .9l2.2 1.8L8 4.5z" fill="currentColor"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/></svg>`;
-    case 'at-risk':   return `<svg ${w}><path d="M8 1.6l6.8 12.3H1.2z" fill="#f1c21b"/><path d="M8 6v3.8M8 11.3v.8" stroke="#161616" stroke-width="1.5"/></svg>`;
-    case 'delayed':   return `<svg ${w}><circle cx="8" cy="8" r="7" fill="#da1e28"/><path d="M8 4.3v4.6M8 10.9v.9" stroke="#fff" stroke-width="1.6"/></svg>`;
-    case 'not-started': return `<svg ${w}><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-opacity=".55" stroke-width="1.4"/></svg>`;
-    case 'cancelled': return `<svg ${w}><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-opacity=".6" stroke-width="1.4"/><path d="M3.8 12.2l8.4-8.4" stroke="currentColor" stroke-opacity=".6" stroke-width="1.4"/></svg>`;
+    case 'at-risk':   return `<svg ${w}><path fill="#f1c21b" d="M8 1L1 14h14L8 1z"/><path fill="#161616" d="M7.4 5.5h1.2v4.2H7.4zm0 5.2h1.2v1.2H7.4z"/></svg>`;
+    case 'delayed':   return `<svg ${w}><path fill="#da1e28" d="M8 1C4.1 1 1 4.1 1 8s3.1 7 7 7 7-3.1 7-7-3.1-7-7-7zm-.6 3.5h1.2v5.2H7.4V4.5zm.6 7.2c-.4 0-.8-.3-.8-.8s.4-.8.8-.8.8.4.8.8-.4.8-.8.8z"/></svg>`;
+    case 'not-started': return `<svg width="${s}" height="${s}" viewBox="0 0 32 32" fill="currentColor"><path d="M7.7,4.7a14.7,14.7,0,0,0-3,3.1L6.3,9A13.26,13.26,0,0,1,8.9,6.3Z"/><path d="M4.6,12.3l-1.9-.6A12.51,12.51,0,0,0,2,16H4A11.48,11.48,0,0,1,4.6,12.3Z"/><path d="M2.7,20.4a14.4,14.4,0,0,0,2,3.9l1.6-1.2a12.89,12.89,0,0,1-1.7-3.3Z"/><path d="M7.8,27.3a14.4,14.4,0,0,0,3.9,2l.6-1.9A12.89,12.89,0,0,1,9,25.7Z"/><path d="M11.7,2.7l.6,1.9A11.48,11.48,0,0,1,16,4V2A12.51,12.51,0,0,0,11.7,2.7Z"/><path d="M24.2,27.3a15.18,15.18,0,0,0,3.1-3.1L25.7,23A11.53,11.53,0,0,1,23,25.7Z"/><path d="M27.4,19.7l1.9.6A15.47,15.47,0,0,0,30,16H28A11.48,11.48,0,0,1,27.4,19.7Z"/><path d="M29.2,11.6a14.4,14.4,0,0,0-2-3.9L25.6,8.9a12.89,12.89,0,0,1,1.7,3.3Z"/><path d="M24.1,4.6a14.4,14.4,0,0,0-3.9-2l-.6,1.9a12.89,12.89,0,0,1,3.3,1.7Z"/><path d="M20.3,29.3l-.6-1.9A11.48,11.48,0,0,1,16,28v2A21.42,21.42,0,0,0,20.3,29.3Z"/></svg>`;
+    case 'cancelled': return `<svg width="${s}" height="${s}" viewBox="0 0 32 32" fill="currentColor"><path d="M16,2A13.914,13.914,0,0,0,2,16,13.914,13.914,0,0,0,16,30,13.914,13.914,0,0,0,30,16,13.914,13.914,0,0,0,16,2Zm5.4449,21L9,10.5557,10.5557,9,23,21.4448Z"/></svg>`;
     default: return '';
   }
 }
 const I = {
-  chev:`<svg class="chev" width="10" height="10" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>`,
-  caret:`<svg width="8" height="8" viewBox="0 0 16 16"><path d="M3 6l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
-  plus:`<svg width="14" height="14" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.4"/></svg>`,
-  minus:`<svg width="14" height="14" viewBox="0 0 16 16"><path d="M3 8h10" stroke="currentColor" stroke-width="1.4"/></svg>`,
-  more:`<svg width="14" height="14" viewBox="0 0 16 16"><circle cx="3.5" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="12.5" cy="8" r="1.2" fill="currentColor"/></svg>`,
-  grip:`<svg width="10" height="12" viewBox="0 0 10 12"><g fill="currentColor"><circle cx="3" cy="2" r="1"/><circle cx="7" cy="2" r="1"/><circle cx="3" cy="6" r="1"/><circle cx="7" cy="6" r="1"/><circle cx="3" cy="10" r="1"/><circle cx="7" cy="10" r="1"/></g></svg>`,
-  eye:`<svg width="14" height="14" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8s-2.4 4.5-6.5 4.5S1.5 8 1.5 8z" fill="none" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>`,
-  eyeOff:`<svg width="14" height="14" viewBox="0 0 16 16"><path d="M1.5 8s2.4-4.5 6.5-4.5S14.5 8 14.5 8s-2.4 4.5-6.5 4.5S1.5 8 1.5 8z" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".5"/><path d="M2.5 13.5l11-11" stroke="currentColor" stroke-width="1.2"/></svg>`,
-  cal:`<svg width="13" height="13" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5 1.5v3M11 1.5v3" stroke="currentColor" stroke-width="1.2"/></svg>`,
-  link:`<svg width="13" height="13" viewBox="0 0 16 16"><path d="M6.5 9.5l3-3M7 4.5l1-1a2.5 2.5 0 013.5 3.5l-1 1M9 11.5l-1 1a2.5 2.5 0 01-3.5-3.5l1-1" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`,
-  x:`<svg width="10" height="10" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6"/></svg>`,
-  fit:`<svg width="14" height="14" viewBox="0 0 16 16"><path d="M2 3v10M14 3v10M4.5 8h7M6.5 6l-2 2 2 2M9.5 6l2 2-2 2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>`,
-  copy:`<svg width="13" height="13" viewBox="0 0 16 16"><rect x="5" y="5" width="9" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M11 3V2H2v9h1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>`,
+  chev:`<svg class="chev" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z"/></svg>`,
+  caret:`<svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor"><path d="M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z"/></svg>`,
+  plus:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3v4H4v1h4v4h1V8h4V7H9V3z"/></svg>`,
+  minus:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 7.5h10v1H3z"/></svg>`,
+  more:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3.5" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.5" r="1.5"/></svg>`,
+  grip:`<svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><rect x="10" y="6" width="4" height="4"/><rect x="18" y="6" width="4" height="4"/><rect x="10" y="14" width="4" height="4"/><rect x="18" y="14" width="4" height="4"/><rect x="10" y="22" width="4" height="4"/><rect x="18" y="22" width="4" height="4"/></svg>`,
+  eye:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5C4.2 3.5 1.2 6.8 1 7c0 .1 0 .2.1.2 1.2 1.8 3.9 4.3 6.9 4.3 3.8 0 6.8-3.3 7-3.5 0-.1 0-.2-.1-.2C13.7 6 11 3.5 8 3.5zm0 7c-2.3 0-4.5-1.8-5.7-3C3.5 6.3 5.7 4.5 8 4.5s4.5 1.8 5.7 3c-1.2 1.2-3.4 3-5.7 3zm0-4.8c-1 0-1.8.8-1.8 1.8s.8 1.8 1.8 1.8 1.8-.8 1.8-1.8-.8-1.8-1.8-1.8z"/></svg>`,
+  eyeOff:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.3 2l-.7.7 2.2 2.2C1.6 5.8 1.1 6.8 1 7c0 .1 0 .2.1.2 1.2 1.8 3.9 4.3 6.9 4.3 1.5 0 2.9-.6 4.1-1.6l2.2 2.2.7-.7L1.3 2zM8 10.5c-2.3 0-4.5-1.8-5.7-3 .4-.4 1.1-1.2 2-1.9l4.8 4.8c-.4.1-.7.1-1.1.1zm5.7-3c-.6.6-1.4 1.3-2.3 1.9l-.7-.7c.8-.5 1.5-1.1 2-1.6-1.2-1.2-3.4-3-5.7-3-.6 0-1.2.1-1.7.3L4.6 3.7c1.1-.5 2.2-.7 3.4-.7 3.8 0 6.8 3.3 7 3.5 0 .1 0 .2-.1.2z"/></svg>`,
+  cal:`<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M13 2h-2V1h-1v1H6V1H5v1H3a1 1 0 00-1 1v11a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1zm0 12H3V6h10v8zM3 5V3h2v1h1V3h4v1h1V3h2v2H3z"/></svg>`,
+  link:`<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M6.8 8.8l-.7.7c-1 1-1 2.6 0 3.5s2.6 1 3.5 0l2.1-2.1c1-1 1-2.6 0-3.5l-.4-.4-.7.7.4.4c.6.6.6 1.6 0 2.1l-2.1 2.1c-.6.6-1.6.6-2.1 0s-.6-1.6 0-2.1l.7-.7-.7-.8zm2.4-1.6l.7-.7c1-1 1-2.6 0-3.5s-2.6-1-3.5 0L4.3 5.1c-1 1-1 2.6 0 3.5l.4.4.7-.7-.4-.4c-.6-.6-.6-1.6 0-2.1l2.1-2.1c.6-.6 1.6-.6 2.1 0s.6 1.6 0 2.1l-.7.7.7.8zM5.5 9.8l4.3-4.3.7.7-4.3 4.3z"/></svg>`,
+  x:`<svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M12 4.7L11.3 4 8 7.3 4.7 4 4 4.7 7.3 8 4 11.3l.7.7L8 8.7l3.3 3.3.7-.7L8.7 8z"/></svg>`,
+  fit:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1v14h1V1H2zm11 0v14h1V1h-1zM5 8l2.5-2.5-.7-.7L3.6 8l3.2 3.2.7-.7L5 8zm6 0l-2.5 2.5.7.7L12.4 8l-3.2-3.2-.7.7L11 8zM5 7.5h6v1H5z"/></svg>`,
+  copy:`<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M14 4h-8a1 1 0 00-1 1v9a1 1 0 001 1h8a1 1 0 001-1V5a1 1 0 00-1-1zm0 10H6V5h8v9zM4 12H3a1 1 0 01-1-1V2a1 1 0 011-1h8a1 1 0 011 1v1h-1V2H3v9h1v1z"/></svg>`,
+  replicate:`<svg width="14" height="14" viewBox="0 0 32 32" fill="currentColor"><path d="M28,8h2V4a2.0021,2.0021,0,0,0-2-2H24V4h4Z"/><path d="M17 2H21V4H17z"/><path d="M28 11H30V15H28z"/><path d="M28,18v4H24V10a2.0023,2.0023,0,0,0-2-2H10V4h4V2H10A2.0023,2.0023,0,0,0,8,4V8H4a2.0023,2.0023,0,0,0-2,2V28a2.0023,2.0023,0,0,0,2,2H22a2.0023,2.0023,0,0,0,2-2V24h4a2.0023,2.0023,0,0,0,2-2V18ZM22,28H4V10H22Z"/></svg>`,
   layAbove:`<svg width="14" height="14" viewBox="0 0 16 16"><rect x="2" y="2.5" width="12" height="3.5" fill="currentColor"/><rect x="2.5" y="8.5" width="11" height="5" fill="none" stroke="currentColor" stroke-opacity=".5"/></svg>`,
   layMain:`<svg width="14" height="14" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="3" fill="none" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="7" width="12" height="3.5" fill="currentColor"/><rect x="2.5" y="12" width="11" height="2" fill="none" stroke="currentColor" stroke-opacity=".5"/></svg>`,
   layBelow:`<svg width="14" height="14" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="5" fill="none" stroke="currentColor" stroke-opacity=".5"/><rect x="2" y="10" width="12" height="3.5" fill="currentColor"/></svg>`,
@@ -357,10 +382,10 @@ const I = {
   eBoth:`<svg width="18" height="10" viewBox="0 0 18 10"><path d="M1 1h12l4 4-4 4H1l4-4z" fill="currentColor"/></svg>`,
 };
 const VICON = {
-  bar:`<svg width="14" height="14" viewBox="0 0 16 16"><rect x="1.5" y="5.5" width="13" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`,
-  umbrella:`<svg width="14" height="14" viewBox="0 0 16 16"><rect x="1.5" y="3" width="13" height="3" fill="currentColor"/><rect x="3.5" y="8.5" width="11" height="4" fill="none" stroke="currentColor" stroke-opacity=".5"/></svg>`,
-  card:`<svg width="14" height="14" viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 5h5" stroke="currentColor"/></svg>`,
-  milestone:`<svg width="14" height="14" viewBox="0 0 16 16"><path d="M8 2.5L13.5 8 8 13.5 2.5 8z" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`,
+  bar:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 5h12v6H2V5zm1 1v4h10V6H3z"/></svg>`,
+  umbrella:`<svg width="14" height="14" viewBox="0 0 32 32" fill="currentColor"><path d="M28,21H4a2.0021,2.0021,0,0,1-2-2V13a2.0021,2.0021,0,0,1,2-2H28a2.0021,2.0021,0,0,1,2,2v6A2.0021,2.0021,0,0,1,28,21ZM4,13v6H28V13Z"/><rect x="6" y="15" width="14" height="2"/></svg>`,
+  card:`<svg width="14" height="14" viewBox="0 0 32 32" fill="currentColor"><path d="M28,4H4A2,2,0,0,0,2,6V26a2,2,0,0,0,2,2H28a2,2,0,0,0,2-2V6A2,2,0,0,0,28,4Zm0,2v6H4V6ZM4,26V14H28V26Z"/></svg>`,
+  milestone:`<svg width="14" height="14" viewBox="0 0 32 32" fill="currentColor"><path d="M24.5857,6.5859A1.9865,1.9865,0,0,0,23.1714,6H16V2H14V6H6A2.0025,2.0025,0,0,0,4,8v6a2.0025,2.0025,0,0,0,2,2h8V30h2V16h7.1714a1.9865,1.9865,0,0,0,1.4143-.5859L29,11ZM23.1714,14H6V8H23.1716l3,3Z"/></svg>`,
 };
 
 /* Variant presets — variants are data, not components */
@@ -538,7 +563,7 @@ const TEMPLATES = {
 };
 function loadTemplate(key){
   const t=TEMPLATES[key]; if(!t) return;
-  snap(); doc=t.make(); S.sel=[]; S.selKind=null; S.story=false; S.stepIdx=0; S.q='';
+  snap(); doc=normStory(t.make()); S.sel=[]; S.selKind=null; S.story=false; S.stepIdx=0; S.q='';
   renderAll(); toast('Loaded: '+t.label);
 }
 
@@ -546,7 +571,7 @@ function loadTemplate(key){
 const S = {
   sel:[], selKind:null, tab:'design',
   open:{placement:true, content:true, appearance:false, status:false},
-  expanded:null, pop:null, spanAnchor:null, story:false, stepIdx:0,
+  expanded:null, pop:null, spanAnchor:null, story:false, stepIdx:0, storyEdit:false,
   zoom:.8, q:'', clip:null, dragBi:null,
 };
 const getEl = id => doc.elements.find(e=>e.id===id);
@@ -556,11 +581,11 @@ const layerOf = e => e.layer || PRESETS[e.variant].layer;
 const N = ()=>doc.periods.length;
 
 /* ---------- history ---------- */
-let past=[], future=[], burst=null;
-function snap(){ past.push(JSON.stringify(doc)); if(past.length>100) past.shift(); future=[]; }
+let past=[], future=[], burst=null, dirty=false;
+function snap(){ dirty=true; past.push(JSON.stringify(doc)); if(past.length>100) past.shift(); future=[]; }
 function liveSnap(){ if(!burst) snap(); clearTimeout(burst); burst=setTimeout(()=>burst=null,400); }
-function undo(){ if(!past.length) return; future.push(JSON.stringify(doc)); doc=JSON.parse(past.pop()); fixSel(); renderAll(); toast('Undo'); }
-function redo(){ if(!future.length) return; past.push(JSON.stringify(doc)); doc=JSON.parse(future.pop()); fixSel(); renderAll(); toast('Redo'); }
+function undo(){ if(!past.length) return; dirty=true; future.push(JSON.stringify(doc)); doc=JSON.parse(past.pop()); fixSel(); renderAll(); toast('Undo'); }
+function redo(){ if(!future.length) return; dirty=true; past.push(JSON.stringify(doc)); doc=JSON.parse(future.pop()); fixSel(); renderAll(); toast('Redo'); }
 function fixSel(){
   if(S.selKind==='element') S.sel=S.sel.filter(getEl);
   if(S.selKind==='lane') S.sel=S.sel.filter(getLane);
@@ -613,7 +638,22 @@ function clipFor(ed){
   const right = ed.r ? `calc(100% - ${a}px) 0, 100% 50%, calc(100% - ${a}px) 100%` : `100% 0, 100% 100%`;
   return `clip-path:polygon(0 0, ${right}, 0 100%${ed.l?`, ${a}px 50%`:''});${ed.r?'margin-right:-5px;padding-right:14px;':''}${ed.l?'padding-left:13px;':''}`;
 }
-function inStep(e, st){ return st.laneIds.includes(e.laneId) || st.elementIds.includes(e.id); }
+function inStep(e, st){ return !!st && ((st.laneIds||[]).includes(e.laneId) || (st.elementIds||[]).includes(e.id)); }
+const curStep = () => (doc.story && doc.story[S.stepIdx]) || null;
+function clampStep(){ const n=doc.story.length; S.stepIdx = n ? Math.min(Math.max(0,S.stepIdx|0), n-1) : 0; }
+/* fill defaults so hand-written / MCP / imported steps never break rendering */
+function normStory(d){
+  if(!Array.isArray(d.story)) d.story=[];
+  d.story = d.story.filter(s=>s && typeof s==='object').map(s=>({
+    ...s,
+    id: s.id || nid('st'),
+    title: s.title ?? '',
+    text: s.text ?? '',
+    laneIds: Array.isArray(s.laneIds) ? s.laneIds : [],
+    elementIds: Array.isArray(s.elementIds) ? s.elementIds : [],
+  }));
+  return d;
+}
 
 /* ================= RENDERERS ================= */
 function renderBlock(b, i, e, lane){
@@ -627,7 +667,7 @@ function renderBlock(b, i, e, lane){
     case 'metrics':  return `<div class="b-metrics" data-bi="${i}" ${h}>${(b.lines||[]).map(esc).join('<br>')}</div>`;
     case 'entries':  return `<div class="b-entries" data-bi="${i}" ${h}>${(b.rows||[]).map(r=>`<div><b>${esc(r.name)}</b><span>${esc(r.value)}</span></div>`).join('')}</div>`;
     case 'text':     return `<div class="b-text" data-bi="${i}" ${h}>${esc(b.text)}</div>`;
-    case 'owner':    return `<div class="b-owner" data-bi="${i}" ${h}><i></i>${esc(b.name)}</div>`;
+    case 'owner':    return b.name&&b.name.trim() ? `<div class="b-owner" data-bi="${i}" ${h} title="Owner: ${esc(b.name)}"><i>${esc(initials(b.name))}</i><span>${esc(b.name)}</span></div>` : '';
     case 'progress': return `<div class="b-prog" data-bi="${i}" ${h}><i style="width:${b.value||0}%"></i></div>`;
   }
   return '';
@@ -638,7 +678,8 @@ function renderNode(e, lane, ri, ed){
   const {bg, fg} = resolveTone(e, lane);
   const sel = S.selKind==='element' && S.sel.includes(e.id);
   const single = sel && S.sel.length===1;
-  const dim = S.story && !inStep(e, doc.story[S.stepIdx]);
+  const cs = curStep();
+  const dim = S.story && !!cs && !inStep(e, cs);
   const blocks = e.blocks.map((b,i)=>pr.blocks.includes(b.type)?renderBlock(b,i,e,lane):'').join('');
   const dia = e.variant==='milestone' ? `<i class="dia" style="background:${bg}"></i>` : '';
   return `<div class="node v-${e.variant} ${sel?(single?'sel':'sel multi'):''} ${dim?'dim':''}" data-node="${e.id}" style="grid-column:${e.span.start+2}/${e.span.end+3};grid-row:${ri+1}">
@@ -654,7 +695,8 @@ function renderLane(lane){
   const rows = L.rows.length ? L.rows : [{size:'bar',items:[]}];
   const tpl = rows.map(r=>r.size==='card'?'minmax(112px,auto)':r.size==='bar'?'40px':'24px').join(' ');
   const lsel = S.selKind==='lane' && S.sel[0]===lane.id;
-  const dim = S.story && !doc.story[S.stepIdx].laneIds.includes(lane.id) && !doc.elements.some(e=>e.laneId===lane.id && inStep(e,doc.story[S.stepIdx]));
+  const cs = curStep();
+  const dim = S.story && !!cs && !inStep({laneId:lane.id,id:null}, cs) && !doc.elements.some(e=>e.laneId===lane.id && inStep(e,cs));
   const track = lane.kind==='cards' ? 'transparent' : mix(lane.color,'#ffffff',.92);
   return `<div class="lane ${lsel?'lsel':''}" style="grid-template-rows:${tpl}">
     <div class="lane-label ${dim?'dim':''}" data-lane="${lane.id}"><i class="acc" style="background:${lane.color}"></i><span>${esc(lane.title)}</span></div>
@@ -703,9 +745,15 @@ function renderCanvas(){
     sizer.style.padding = '';
   }
   $('#zLbl').textContent = Math.round(S.zoom*100)+'%';
-  $('#docTitle').textContent = '/ '+doc.title;
   $('#tbDocTitle').textContent = doc.title;
   positionOverlays();
+  refreshJson();
+}
+/* keep the Data-tab JSON in step with live edits without re-rendering (and losing focus in) the inspector */
+function refreshJson(){
+  const pre=document.querySelector('#ins pre.json'); if(!pre) return;
+  const e=S.selKind==='element' && S.sel.length===1 ? getEl(S.sel[0]) : null;
+  if(e) pre.textContent=JSON.stringify(e,null,2);
 }
 function boardRect(elm){
   const br = $('#board').getBoundingClientRect(), r = elm.getBoundingClientRect(), z=S.zoom;
@@ -722,12 +770,46 @@ function positionOverlays(){
 function renderLeft(){
   const L=$('#left');
   if(S.story){
-    const st=doc.story[S.stepIdx];
-    L.innerHTML = `<div class="story"><div class="eyebrow">Story · Step ${S.stepIdx+1} of ${doc.story.length}</div>
-      <div class="steps">${doc.story.map((s,i)=>`<button class="${i===S.stepIdx?'on':''}" data-step="${i}" title="${esc(s.title)}"></button>`).join('')}</div>
-      <h2>${esc(st.title)}</h2><p>${esc(st.text)}</p>
-      <div class="nav"><button class="btn" data-stepnav="-1">← Prev</button><button class="btn dark" data-stepnav="1">Next →</button></div>
+    const st=curStep(), n=doc.story.length;
+    if(!st){
+      L.innerHTML = `<div class="story"><div class="eyebrow">Story · No steps yet</div>
+        <h2>Tell the story of this roadmap</h2>
+        <p>A story walks viewers through the roadmap one step at a time, highlighting the lanes or elements you choose and dimming the rest.</p>
+        <div class="srow" style="margin-top:16px"><button class="btn dark" data-sact="add">${I.plus} Add first step</button><button class="btn ghost" data-sact="exit">Exit story</button></div>
       </div>`;
+      return;
+    }
+    const ed=S.storyEdit, titleOf=id=>{ const e=getEl(id); return e ? (e.blocks.find(b=>b.type==='title')?.text||'Untitled') : null; };
+    const pips=`<div class="steps">${doc.story.map((s,i)=>`<button class="${i===S.stepIdx?'on':''}" data-step="${i}" title="${esc(s.title)}"></button>`).join('')}</div>`;
+    const tools=`<div class="sdiv"></div>
+      <div class="srow">
+        <button class="btn ${ed?'dark':'outline'}" data-sact="edit">${ed?'Done':'Edit step'}</button>
+      </div>
+      <div class="sgroup">Arrange</div>
+      <div class="srow">
+        <button class="btn sm ghost" data-sact="dup" title="Duplicate step">${I.copy} Duplicate</button>
+        <button class="btn sm ghost" data-sact="left" title="Move step earlier" ${S.stepIdx===0?'disabled':''}>← Earlier</button>
+        <button class="btn sm ghost" data-sact="right" title="Move step later" ${S.stepIdx===n-1?'disabled':''}>Later →</button>
+      </div>
+      <div class="srow" style="margin-top:6px"><button class="btn sm ghost danger" data-sact="del" title="Delete step">${I.x} Delete step</button></div>`;
+    let body;
+    if(ed){
+      const feat=st.elementIds.map(id=>[id,titleOf(id)]).filter(x=>x[1]!=null);
+      body = `<label class="lbl" for="stTitle">Title</label>
+        <input class="f" id="stTitle" data-sf="title" value="${esc(st.title)}" placeholder="Step title">
+        <label class="lbl" for="stText" style="display:block;margin-top:10px">Text</label>
+        <textarea class="f" id="stText" data-sf="text" rows="5" placeholder="What should viewers take away from this step?">${esc(st.text)}</textarea>
+        <div class="lbl" style="margin-top:10px">Highlighted lanes</div>
+        ${doc.lanes.map(l=>`<label class="chk"><input type="checkbox" data-slane="${l.id}" ${st.laneIds.includes(l.id)?'checked':''}><i class="sw" style="background:${l.color}"></i><span>${esc(l.title)}</span></label>`).join('')}
+        <div class="lbl" style="margin-top:10px">Featured elements</div>
+        ${feat.length ? feat.map(([id,t])=>`<div class="felem"><span>${esc(t)}</span><span class="sp"></span><button class="icon-btn sm" data-sact="rmel" data-id="${id}" title="Remove from step">${I.x}</button></div>`).join('') : '<div class="hint">None. Add one from an element\'s Story tab.</div>'}`;
+    } else {
+      const notes=doc.elements.filter(e=>e.note && inStep(e,st));
+      body = `<h2>${esc(st.title)||'<span style="color:var(--t3)">Untitled step</span>'}</h2><p>${esc(st.text)}</p>
+        ${notes.map(e=>`<div class="snote"><b>${esc(titleOf(e.id))}</b>${esc(e.note)}</div>`).join('')}`;
+    }
+    L.innerHTML = `<div class="story"><div class="shead"><div class="eyebrow">Story · Step ${S.stepIdx+1} of ${n}</div><button class="btn sm outline" data-sact="add" title="Add a step after this one">${I.plus} Add step</button></div>${pips}${body}
+      <div class="nav" style="margin-top:16px"><button class="btn outline" data-stepnav="-1">← Prev</button><button class="btn dark" data-stepnav="1">Next →</button></div>${tools}</div>`;
     return;
   }
   if(!L.querySelector('#tree')){
@@ -774,7 +856,7 @@ function renderInspector(){
 function insElement(e){
   const pr=PRESETS[e.variant], lane=getLane(e.laneId), ti=e.blocks.findIndex(b=>b.type==='title');
   let h = `<div class="ins-head"><button class="vbtn" data-pop="variant">${VICON[e.variant]}${pr.label}${I.caret}</button><span class="sp"></span>
-    <button class="icon-btn" data-act="dup" title="Duplicate ⌘D">${I.copy}</button><button class="icon-btn" data-pop="more" title="More">${I.more}</button></div>
+    <button class="icon-btn" data-act="dup" title="Duplicate ⌘D">${I.replicate}</button><button class="icon-btn" data-pop="more" title="More">${I.more}</button></div>
     <input class="name" data-b="${ti}" data-bk="text" value="${esc(e.blocks[ti]?.text)}" placeholder="Name" id="nameInput">
     <div class="tabs">${['design','story','data'].map(t=>`<button class="tab ${S.tab===t?'on':''}" data-tab="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div>`;
   if(S.tab==='design'){
@@ -806,15 +888,15 @@ function insElement(e){
       Object.entries(STATUSES).map(([k,v])=>`<button class="st-row ${e.status===k?'on':''}" data-set="status" data-val="${k}">${statusIcon(k)}<span>${v.label}</span><span class="kbd">${v.key}</span></button>`).join('') +
       `<button class="st-row ${!e.status?'on':''}" data-set="status" data-val="null"><span style="width:14px"></span><span>No status</span><span class="kbd">0</span></button>` +
       `<div style="height:6px"></div>` +
-      row('Progress', prog ? `<input type="range" min="0" max="100" data-b="${e.blocks.indexOf(prog)}" data-bk="value" value="${prog.value}" style="flex:1"><span class="mono" style="width:30px;text-align:right">${prog.value}%</span>` : `<button class="btn" data-act="addProgress">${I.plus} Add progress</button>`, prog?'progress':null) +
-      row('Confidence', seg('confidence',[['low','Low'],['med','Med'],['high','High']],e.confidence||'')));
+      row('Progress', prog ? `<input type="range" min="0" max="100" data-b="${e.blocks.indexOf(prog)}" data-bk="value" value="${prog.value}" style="flex:1"><span class="mono" style="width:30px;text-align:right">${prog.value}%</span>` : `<button class="btn" data-act="addProgress">${I.plus} Add progress</button>`, prog?'progress':null));
   }
   if(S.tab==='story'){
-    h += `<div class="pad"><div class="lbl" style="margin-bottom:6px">Featured in story steps</div>${doc.story.map((st,i)=>{
-      const viaLane=st.laneIds.includes(e.laneId), on=inStep(e,st);
-      return `<label class="chk"><input type="checkbox" data-act="stepToggle" data-step="${i}" ${on?'checked':''} ${viaLane?'disabled':''}><span>${i+1}. ${esc(st.title)}</span>${viaLane?'<em>via lane</em>':''}</label>`;}).join('')}
+    h += `<div class="pad"><div class="lbl" style="margin-bottom:6px">Featured in story steps</div>${doc.story.length ? doc.story.map((st,i)=>{
+      const viaLane=(st.laneIds||[]).includes(e.laneId), on=inStep(e,st);
+      return `<label class="chk"><input type="checkbox" data-act="stepToggle" data-step="${i}" ${on?'checked':''} ${viaLane?'disabled':''}><span>${i+1}. ${esc(st.title)}</span>${viaLane?'<em>via lane</em>':''}</label>`;}).join('')
+        : `<div class="hint" style="margin-bottom:8px">No story steps yet. Create one to feature this element.</div><button class="btn" data-act="addStepFor">${I.plus} Add a step</button>`}
       <div style="height:10px"></div><div class="lbl" style="margin-bottom:4px">Narrative note</div>
-      <textarea class="f" rows="4" data-field="note" placeholder="Speaker note shown in story mode">${esc(e.note||'')}</textarea>
+      <textarea class="f" rows="4" data-field="note" placeholder="Shown under the step text in story mode when this element is featured">${esc(e.note||'')}</textarea>
       <div style="height:10px"></div><button class="btn" data-act="playStory">Preview in story mode</button></div>`;
   }
   if(S.tab==='data'){
@@ -905,7 +987,7 @@ function popContent(){
     return `<div class="bgrid">${Object.entries(BLOCKS).map(([t,b])=>{const ok=pr.blocks.includes(t) && (t==='text'||!e.blocks.some(x=>x.type===t)); return `<button data-pb="${t}" ${ok?'':'disabled'}><b>${b.icon}</b>${b.label}</button>`;}).join('')}</div>`;
   }
   if(k==='bmenu') return `<button class="mi" data-pbm="up">Move up<span class="kbd">⌥↑</span></button><button class="mi" data-pbm="down">Move down<span class="kbd">⌥↓</span></button><button class="mi" data-pbm="dup">Duplicate block</button><div class="msep"></div><button class="mi" data-pbm="del">Delete block</button>`;
-  if(k==='export') return `<button class="mi" data-exp="html"><svg width="14" height="14" viewBox="0 0 16 16" style="flex:none"><path d="M5.5 4.5L2 8l3.5 3.5M10.5 4.5L14 8l-3.5 3.5M9 3l-2 10" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>Export HTML (canvas)</button><button class="mi" data-exp="json"><svg width="14" height="14" viewBox="0 0 16 16" style="flex:none"><path d="M2 4.5h12M2 7.5h12M2 10.5h8" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>Export JSON</button><button class="mi" data-exp="pdf"><svg width="14" height="14" viewBox="0 0 16 16" style="flex:none"><rect x="3" y="1.5" width="10" height="13" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>Export PDF</button><button class="mi" data-exp="pptx"><svg width="14" height="14" viewBox="0 0 16 16" style="flex:none"><rect x="1.5" y="3" width="13" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4 7h3.5a1.5 1.5 0 010 3H4" stroke="currentColor" stroke-width="1.3" fill="none"/></svg>Export PPTX</button>`;
+  if(k==='export') return `<button class="mi" data-exp="html"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M5.5 4.1L1.6 8l3.9 3.9.7-.7L3 8l3.2-3.2-.7-.7zm5 0l-.7.7L13 8l-3.2 3.2.7.7 3.9-3.9-3.9-3.9zm-2.9-.6l-2 11 .9.2 2-11-.9-.2z"/></svg>Export HTML (canvas)</button><button class="mi" data-exp="json"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M4 2v1H2v2h2v1H2v2h2v1H2v2h2v1H2a1 1 0 01-1-1V3a1 1 0 011-1h2zm8 0h2a1 1 0 011 1v8a1 1 0 01-1 1h-2v-1h2V9h-2V8h2V6h-2V5h2V3h-2V2zM6 5h4v1H6V5zm0 3h4v1H6V8zm0 3h3v1H6v-1z"/></svg>Export JSON</button><button class="mi" data-exp="pdf"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M10.5 1H3a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V4.5L10.5 1zM10 2.2L12.8 5H10V2.2zM3 14V2h6v4h4v8H3z"/><path d="M4.5 8h2a1 1 0 011 1v1a1 1 0 01-1 1h-1v2h-1V8zm1 2h1V9h-1v1zm3.5-2h1.5a1 1 0 011 1v3a1 1 0 01-1 1H9V8zm1 4h.5V9H10v3z"/></svg>Export PDF</button><button class="mi" data-exp="pptx"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M14 2H2a1 1 0 00-1 1v8a1 1 0 001 1h5v2H5v1h6v-1H9v-2h5a1 1 0 001-1V3a1 1 0 00-1-1zm0 9H2V3h12v8z"/><path d="M6 5h3a1 1 0 011 1v1a1 1 0 01-1 1H7v2H6V5zm1 2h2V6H7v1z"/></svg>Export PPTX</button><div class="msep"></div><button class="mi" data-exp="deeplink"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M6.8 8.8l-.7.7c-1 1-1 2.6 0 3.5s2.6 1 3.5 0l2.1-2.1c1-1 1-2.6 0-3.5l-.4-.4-.7.7.4.4c.6.6.6 1.6 0 2.1l-2.1 2.1c-.6.6-1.6.6-2.1 0s-.6-1.6 0-2.1l.7-.7-.7-.8zm2.4-1.6l.7-.7c1-1 1-2.6 0-3.5s-2.6-1-3.5 0L4.3 5.1c-1 1-1 2.6 0 3.5l.4.4.7-.7-.4-.4c-.6-.6-.6-1.6 0-2.1l2.1-2.1c.6-.6 1.6-.6 2.1 0s.6 1.6 0 2.1l-.7.7.7.8zM5.5 9.8l4.3-4.3.7.7-4.3 4.3z"/></svg>Copy deep link</button>`;
   if(k==='template') return Object.entries(TEMPLATES).map(([id,t])=>`<button class="mi" data-tpl="${id}">${t.label}</button>`).join('');
   return '';
 }
@@ -914,6 +996,15 @@ function popContent(){
 function targets(){ return S.selKind==='element' ? S.sel.map(getEl).filter(Boolean) : []; }
 function setPath(o,path,v){ const ks=path.split('.'); let x=o; ks.slice(0,-1).forEach(k=>{x[k]=x[k]??{}; x=x[k];}); x[ks.at(-1)]=v; }
 function coerce(v){ if(v==='null') return null; if(v==='true') return true; if(v==='false') return false; if(/^\d+$/.test(v)) return +v; return v; }
+function initials(n){ const p=String(n||'').trim().split(/\s+/).filter(Boolean); return p.length ? (p[0][0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase() : ''; }
+/* meta.owner is the source of truth; keep the canvas owner block in step with it */
+function syncOwnerBlock(e){
+  if(!PRESETS[e.variant].blocks.includes('owner')) return;
+  const name=(e.meta?.owner||'').trim(), i=e.blocks.findIndex(b=>b.type==='owner');
+  if(!name){ if(i>=0) e.blocks.splice(i,1); }
+  else if(i>=0) e.blocks[i].name=name;
+  else e.blocks.push(B('owner',{name}));
+}
 function setField(field, val, {live=false}={}){
   live ? liveSnap() : snap();
   for(const e of targets()){
@@ -923,6 +1014,7 @@ function setField(field, val, {live=false}={}){
     if(field==='meta.owner'||field==='meta.link'||field==='note') v = val;
     if(field==='variant') { switchVariant(e,v); continue; }
     setPath(e, field, v);
+    if(field==='meta.owner') syncOwnerBlock(e);
     if(field==='span.start' && e.span.end<e.span.start) e.span.end=e.span.start;
     if(field==='span.end' && e.span.start>e.span.end) e.span.start=e.span.end;
     if(field==='layer' && v===PRESETS[e.variant].layer) delete e.layer;
@@ -1053,15 +1145,54 @@ $('#board').addEventListener('click', ev=>{
 $('#stage').addEventListener('click', ev=>{ if(ev.target.id==='stage'||ev.target.id==='sizer'){ S.sel=[]; S.selKind=null; renderAll(); } });
 
 /* left panel */
+function newStep(over={}){
+  const sel = S.selKind==='element' ? getEl(S.sel[0])?.laneId : S.selKind==='lane' ? S.sel[0] : null;
+  const lane = sel || doc.lanes[0]?.id;
+  return {id:nid('st'), title:'New step', text:'', laneIds: lane?[lane]:[], elementIds:[], ...over};
+}
+function insertStep(step){
+  doc.story.splice(doc.story.length ? S.stepIdx+1 : 0, 0, step);
+  S.stepIdx = doc.story.indexOf(step); S.storyEdit = true;
+}
+function focusStepTitle(){ const t=$('#stTitle'); t&&(t.focus(),t.select()); }
+function storyAction(a, btn){
+  if(a==='exit') return toggleStory(false);
+  if(a==='edit'){ S.storyEdit=!S.storyEdit; renderLeft(); if(S.storyEdit) focusStepTitle(); return; }
+  if(a==='add'){ snap(); insertStep(newStep()); renderAll(); return focusStepTitle(); }
+  const st=curStep(); if(!st) return;
+  if(a==='dup'){ snap(); insertStep({...st, id:nid('st'), title:st.title+' (copy)', laneIds:[...st.laneIds], elementIds:[...st.elementIds]}); return renderAll(); }
+  if(a==='left'||a==='right'){
+    const j=S.stepIdx+(a==='left'?-1:1); if(j<0||j>=doc.story.length) return;
+    snap(); [doc.story[S.stepIdx],doc.story[j]]=[doc.story[j],doc.story[S.stepIdx]]; S.stepIdx=j; return renderAll();
+  }
+  if(a==='del'){ snap(); doc.story.splice(S.stepIdx,1); if(!doc.story.length) S.storyEdit=false; toast('Step deleted'); return renderAll(); }
+  if(a==='rmel'){ snap(); st.elementIds=st.elementIds.filter(x=>x!==btn.dataset.id); return renderAll(); }
+}
 $('#left').addEventListener('click', ev=>{
   const t=ev.target;
+  const sa=t.closest('[data-sact]'); if(sa && !sa.disabled) return storyAction(sa.dataset.sact, sa);
   const es=t.closest('[data-esel]'), ls=t.closest('[data-lsel]'), sn=t.closest('[data-stepnav]'), st=t.closest('[data-step]');
   if(es) return select('element', es.dataset.esel, ev.shiftKey);
   if(ls) return select('lane', ls.dataset.lsel);
   if(sn) return stepTo(S.stepIdx + +sn.dataset.stepnav);
   if(st) return stepTo(+st.dataset.step);
 });
-$('#left').addEventListener('input', ev=>{ if(ev.target.id==='lq'){ S.q=ev.target.value; renderLeft(); } });
+$('#left').addEventListener('input', ev=>{
+  const t=ev.target;
+  if(t.id==='lq'){ S.q=t.value; renderLeft(); return; }
+  if(t.dataset.sf){ // live edit: update data only, never rebuild the field being typed in
+    const st=curStep(); if(!st) return;
+    liveSnap(); st[t.dataset.sf]=t.value;
+    if(t.dataset.sf==='title'){ const pip=$(`#left [data-step="${S.stepIdx}"]`); pip&&(pip.title=t.value); updateFsStoryBar(); }
+  }
+});
+$('#left').addEventListener('change', ev=>{
+  const t=ev.target, st=curStep();
+  if(t.dataset.slane && st){
+    snap(); st.laneIds = t.checked ? [...st.laneIds.filter(x=>x!==t.dataset.slane), t.dataset.slane] : st.laneIds.filter(x=>x!==t.dataset.slane);
+    renderAll();
+  }
+});
 $('#left').addEventListener('mouseover', ev=>{ const es=ev.target.closest('[data-esel]'); document.querySelectorAll('.node.hov').forEach(n=>n.classList.remove('hov')); if(es){ const n=$(`[data-node="${es.dataset.esel}"] .surface`); n&&(n.style.outline='1px solid #161616'); } });
 $('#left').addEventListener('mouseout', ev=>{ const es=ev.target.closest('[data-esel]'); if(es){ const n=$(`[data-node="${es.dataset.esel}"] .surface`); n&&(n.style.outline=''); } });
 
@@ -1096,6 +1227,7 @@ $('#ins').addEventListener('click', ev=>{
   if(a==='clearColor'){ snap(); delete e.color; return renderAll(); }
   if(a==='addProgress'){ snap(); if(!PRESETS[e.variant].blocks.includes('progress')){ toast('Progress not available for this variant'); return; } e.blocks.push(BLOCKS.progress.make()); return renderAll(); }
   if(a==='stepToggle'){ snap(); const st=doc.story[+act.dataset.step]; st.elementIds = st.elementIds.includes(e.id) ? st.elementIds.filter(x=>x!==e.id) : [...st.elementIds, e.id]; return renderAll(); }
+  if(a==='addStepFor'){ snap(); const sp=newStep({laneIds:[], elementIds:[e.id], title:'New step'}); doc.story.push(sp); S.stepIdx=doc.story.length-1; toggleStory(true); S.storyEdit=true; renderAll(); return focusStepTitle(); }
   if(a==='playStory'){ const i=doc.story.findIndex(st=>inStep(e,st)); toggleStory(true); stepTo(Math.max(0,i)); return; }
   if(a==='copyJson'){ navigator.clipboard?.writeText(JSON.stringify(e,null,2)); return toast('JSON copied'); }
   if(a==='alignSpan'){ snap(); const f=getEl(S.sel[0]).span; targets().forEach(o=>o.span={...f}); return renderAll(); }
@@ -1118,6 +1250,7 @@ $('#ins').addEventListener('input', ev=>{
     else if(k==='rows') b.rows=t.value.split('\n').filter(s=>s.trim()).map(s=>{const [n,...v]=s.split(/\s*[|\t]\s*/); return {name:n.trim(), value:v.join(' ').trim()};});
     else if(k==='value') b.value=+t.value;
     else b[k]=t.value;
+    if(b.type==='owner' && k==='name') setPath(e,'meta.owner',t.value);
     renderCanvas(); renderLeft();
     if(k==='value') { const lbl=t.parentElement.querySelector('.mono'); lbl&&(lbl.textContent=b.value+'%'); }
     return;
@@ -1222,6 +1355,19 @@ $('#undoBtn').onclick=undo; $('#redoBtn').onclick=redo;
 $('#zIn').onclick=()=>{ S.zoom=Math.min(1.5,+(S.zoom+.1).toFixed(2)); renderCanvas(); };
 $('#zOut').onclick=()=>{ S.zoom=Math.max(.4,+(S.zoom-.1).toFixed(2)); renderCanvas(); };
 $('#exportBtn').onclick=(ev)=>{ ev.stopPropagation(); openPop('export', $('#exportBtn')); };
+$('#importBtn').onclick=()=>{ $('#importFile').value=''; $('#importFile').click(); };
+$('#importFile').onchange=async(ev)=>{
+  const f=ev.target.files[0]; if(!f) return;
+  try{
+    const parsed=JSON.parse(await f.text());
+    if(!parsed || !Array.isArray(parsed.periods) || !Array.isArray(parsed.lanes) || !Array.isArray(parsed.elements)) throw new Error('missing periods, lanes or elements');
+    if(!Array.isArray(parsed.sections) || !parsed.sections.length) parsed.sections=[{id:'s1',title:'',subtitle:'',collapsed:false,laneIds:parsed.lanes.map(l=>l.id)}];
+    normStory(parsed);
+    if(typeof parsed.today!=='number') parsed.today=0;
+    snap(); doc=parsed; S.sel=[]; S.selKind=null; S.story=false; S.stepIdx=0; S.q='';
+    renderAll(); toast('Imported '+f.name);
+  }catch(err){ toast('Import failed: '+err.message); }
+};
 $('#templateBtn').onclick=(ev)=>{ ev.stopPropagation(); openPop('template', $('#templateBtn')); };
 
 function exportCanvasHTML(){
@@ -1258,10 +1404,28 @@ ${clone.outerHTML}
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   toast('Exported '+safeName+'.html');
 }
-async function doExport(fmt){
+async function doExport(fmt){ await doExportInner(fmt); dirty=false; }
+async function doExportInner(fmt){
   if(fmt==='html') return exportCanvasHTML();
   if(fmt==='json'){
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(doc,null,2)],{type:'application/json'})); a.download='roadmap.json'; a.click(); toast('Exported roadmap.json'); return;
+  }
+  if(fmt==='deeplink'){
+    const url=window.docToDeepLink(doc);
+    // navigator.clipboard is blocked on file:// — use execCommand fallback
+    let ok=false;
+    if(navigator.clipboard && location.protocol!=='file:'){
+      try { await navigator.clipboard.writeText(url); ok=true; } catch(e){}
+    }
+    if(!ok){
+      const ta=document.createElement('textarea');
+      ta.value=url; ta.style.cssText='position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta); ta.select();
+      try { ok=document.execCommand('copy'); } catch(e){}
+      document.body.removeChild(ta);
+    }
+    if(ok){ toast('Deep link copied to clipboard'); } else { prompt('Copy this deep link:', url); }
+    return;
   }
   toast('Generating…');
   const board=$('#board');
@@ -1297,7 +1461,7 @@ function toggleCanvasFS(on){
   document.body.classList.toggle('canvas-fs', on);
   let exitBtn = $('#fsExit');
   if(on){
-    if(!exitBtn){ exitBtn=document.createElement('button'); exitBtn.id='fsExit'; exitBtn.className='fs-exit'; exitBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5.5 2.5h-3v3M10.5 2.5h3v3M14 10.5v3h-3M2 10.5v3h3"/></svg>Exit'; exitBtn.onclick=()=>toggleCanvasFS(false); document.body.appendChild(exitBtn); }
+    if(!exitBtn){ exitBtn=document.createElement('button'); exitBtn.id='fsExit'; exitBtn.className='fs-exit'; exitBtn.innerHTML='<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5 2H4v3H1v1h4V2zm6 3V2h-1v4h4V5h-3zm-6 6H1v1h3v3h1v-4zm6 4h1v-3h3v-1h-4v4z"/></svg>Exit'; exitBtn.onclick=()=>toggleCanvasFS(false); document.body.appendChild(exitBtn); }
     exitBtn.style.display='flex';
   } else {
     if(exitBtn) exitBtn.style.display='none';
@@ -1307,12 +1471,12 @@ function toggleCanvasFS(on){
   renderCanvas();
 }
 $('#fullscreenBtn').onclick=()=>toggleCanvasFS(!document.body.classList.contains('canvas-fs'));
-function toggleStory(on){ S.story=on; $('#storyBtn').classList.toggle('on',on); $('#main').classList.toggle('story-mode',on); if(on) closePop(); $('#left').innerHTML=''; renderAll(); updateFsStoryBar(); }
-function stepTo(i){ S.stepIdx=(i+doc.story.length)%doc.story.length; renderAll(); updateFsStoryBar(); }
+function toggleStory(on){ S.story=on; S.storyEdit=false; $('#storyBtn').classList.toggle('on',on); $('#main').classList.toggle('story-mode',on); if(on) closePop(); $('#left').innerHTML=''; renderAll(); }
+function stepTo(i){ const n=doc.story.length; if(!n){ S.stepIdx=0; return; } S.stepIdx=((i%n)+n)%n; renderAll(); }
 function updateFsStoryBar(){
   const isFS=document.body.classList.contains('canvas-fs');
   let bar=$('#fsStoryBar');
-  if(!isFS || !S.story){
+  if(!isFS || !S.story || !doc.story.length){
     if(bar) bar.style.display='none';
     return;
   }
@@ -1323,10 +1487,10 @@ function updateFsStoryBar(){
   bar.style.display='flex';
   const curTitle=doc.story[S.stepIdx]?doc.story[S.stepIdx].title:'';
   bar.innerHTML=
-    `<span class="fs-step-label">${esc(curTitle)}</span>`+
-    `<button class="fs-nav" id="fsPrev" title="Previous"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3L6 8l4 5"/></svg></button>`+
+    `<span class="fs-step-label">Step ${S.stepIdx+1} of ${doc.story.length}${curTitle?' · '+esc(curTitle):''}</span>`+
+    `<button class="fs-nav" id="fsPrev" title="Previous"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M10 13l-5-5 5-5 .7.7L6.4 8l4.3 4.3z"/></svg></button>`+
     doc.story.map((s,i)=>`<button class="fs-pip${i===S.stepIdx?' on':''}" data-fsstep="${i}" title="${esc(s.title)}"></button>`).join('')+
-    `<button class="fs-nav" id="fsNext" title="Next"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l4 5-4 5"/></svg></button>`;
+    `<button class="fs-nav" id="fsNext" title="Next"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3l5 5-5 5-.7-.7L9.6 8 5.3 3.7z"/></svg></button>`;
   bar.querySelector('#fsPrev').onclick=()=>stepTo(S.stepIdx-1);
   bar.querySelector('#fsNext').onclick=()=>stepTo(S.stepIdx+1);
   bar.querySelectorAll('[data-fsstep]').forEach(b=>b.onclick=()=>stepTo(+b.dataset.fsstep));
@@ -1346,7 +1510,7 @@ document.addEventListener('keydown', ev=>{
   if(mod && k.toLowerCase()==='z'){ ev.preventDefault(); return ev.shiftKey?redo():undo(); }
   if(mod && k.toLowerCase()==='y'){ ev.preventDefault(); return redo(); }
   if(typing) return;
-  if(S.story){ if(k==='ArrowRight') stepTo(S.stepIdx+1); if(k==='ArrowLeft') stepTo(S.stepIdx-1); return; }
+  if(S.story){ if(doc.story.length){ if(k==='ArrowRight') stepTo(S.stepIdx+1); if(k==='ArrowLeft') stepTo(S.stepIdx-1); } return; }
   if(mod && k.toLowerCase()==='d'){ ev.preventDefault(); return duplicate(); }
   if(!mod && /^[bucm]$/i.test(k) && !targets().length){ return addElement({b:'bar',u:'umbrella',c:'card',m:'milestone'}[k.toLowerCase()]); }
   if(!targets().length) return;
@@ -1366,7 +1530,7 @@ document.addEventListener('keydown', ev=>{
 
 let tt; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on'); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('on'),1400); }
 $('#leftToggle').onclick=()=>{ $('#main').classList.toggle('left-collapsed'); positionOverlays(); };
-function renderAll(){ renderCanvas(); renderLeft(); renderInspector(); }
+function renderAll(){ clampStep(); renderCanvas(); renderLeft(); renderInspector(); updateFsStoryBar(); }
 addEventListener('resize', ()=>{ if(document.body.classList.contains('canvas-fs')) renderCanvas(); else positionOverlays(); });
 document.fonts?.ready.then(positionOverlays);
 
@@ -1383,7 +1547,7 @@ function loadFromHash(){
     const parsed = JSON.parse(atob(b64));
     // Basic sanity check before replacing the default doc
     if (parsed && parsed.periods && parsed.lanes && parsed.elements) {
-      doc = parsed;
+      doc = normStory(parsed);
     }
   } catch(e) {
     // Malformed hash — silently keep the default doc
@@ -1400,7 +1564,10 @@ window.docToDeepLink = function(d){
   return location.origin + location.pathname + '#doc=' + b64;
 };
 
+window.addEventListener('beforeunload', e=>{ if(!dirty) return; e.preventDefault(); e.returnValue=''; });
+
 renderAll();
 </script>
+<div id="credits">Created by Martin Burkel</div>
 </body>
 </html>
