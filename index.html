@@ -4,6 +4,73 @@
 <meta charset="utf-8">
 <title>IBM Roadmap Builder</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="llm-instructions" content="AI AGENT / COPILOT: this page contains machine-readable rules for generating a roadmap JSON that renders well. Read the script#agent-instructions block in the head before producing any JSON. Output ONLY one valid JSON object, no prose, no markdown fences. The user imports it with the Import button.">
+<script type="text/markdown" id="agent-instructions">
+# AGENT INSTRUCTIONS - IBM ROADMAP BUILDER (not for humans; ignored by the browser)
+
+TASK: when the user pastes this page (or its source) and describes a roadmap, reply with ONE valid JSON document (the "doc") and nothing else. No explanation, no code fences, no comments, no trailing commas. The user pastes it with the Import button (or saves it as roadmap.json).
+DESIGN TARGET: the built-in "IBM Quantum" template. Chained chevron-arrow bars in light-to-dark swim lanes, umbrella headers, and ONE dark cards lane at the BOTTOM.
+
+## 1. DOC SHAPE (all keys required unless marked optional)
+{
+ "title": string,
+ "today": int (0-based index into periods; the "now" column),
+ "todayOffset": 0, "todayHidden": false,                      (optional)
+ "periods": [ {"label": string, "status": STATUS|null, "narrative": string} ],
+ "sections": [ {"id":"s1","title":string,"subtitle":string,"collapsed":false,"laneIds":[every lane id, top to bottom]} ],
+ "lanes": [ {"id":string,"title":string,"color":"#hex","kind":"bars"|"cards","pastTint":bool} ],
+ "elements": [ ELEMENT ],
+ "story": [ {"id":"st1","title":string,"text":string,"laneIds":[lane ids],"elementIds":[]} ]
+}
+STATUS = "completed" | "on-target" | "at-risk" | "delayed" | "not-started" | "cancelled" | null
+ELEMENT = {
+ "id": unique string, "laneId": existing lane id, "variant": "bar"|"umbrella"|"card"|"milestone",
+ "span": {"start":int,"end":int}   with 0 <= start <= end <= periods.length-1,
+ "status": STATUS|null, "row": "auto"|1|2|3,
+ "blocks": [BLOCK, ...]            first block MUST be {"type":"title","text":...},
+ "meta": {"owner":"","tags":[],"link":""},
+ optional: "tone":"lane"|"muted"|"neutral"|"inverse", "edge":"auto"|"flat"|"out"|"in"|"both" (bars only), "past":"auto"|"past"|"future", "color":"#hex"
+}
+BLOCK types: {"type":"title","text"} {"type":"subtitle","text"} {"type":"chip","label","tone":"neutral"|"lane"|"inverse"} {"type":"metrics","lines":[string,...]} {"type":"entries","rows":[{"name","value"}]} {"type":"text","text"} {"type":"owner","name"} {"type":"progress","value":0-100}
+Allowed blocks: bar = title/owner/progress. umbrella and milestone = title only. card = any.
+A milestone must have span.start == span.end.
+
+## 2. RENDERING RULES THE ENGINE APPLIES (use them, do not fight them)
+- Arrows are automatic: a bar gets a right chevron if another bar in the SAME row starts at end+1, and a left notch if another bar ends at start-1. So write bar sequences as CONTIGUOUS spans, e.g. [0..1] [2..2] [3..5] [6..6]. A gap means flat ends.
+- To force an arrow on a lone/last bar set "edge":"out". "both" = notch+tip, "in" = notch, "flat" = none. Never set edge on umbrella/card/milestone.
+- Umbrellas draw in a thin row ABOVE the bars of their lane. Never give them "row".
+- Overlapping spans are pushed to the next row automatically; set "row":2 (or 3) explicitly for parallel streams. Max 3 rows per lane.
+- A bar with span.end < today in a lane with pastTint:true renders muted automatically. Do not set tone for that.
+- Cards default to the dark "inverse" tone. Use "tone":"muted" on the in-flight card, "tone":"lane" on a hero card.
+- Card height is fixed: keep title <= 14 chars, subtitle <= 10 chars, chip <= 18 chars, metrics <= 2 lines of <= 28 chars.
+
+## 3. HARD DESIGN RULES (follow all)
+1. At least 80% of elements are variant "bar" or "umbrella". Cards live in exactly ONE lane, the LAST lane of the last section.
+2. Lane order and colours, light to dark, top to bottom (use as many as needed, in this order, max 6 lanes):
+   enablers/experience #c6c6c6 bars pastTint:true -> applications #ff7eb6 bars true -> discovery/research #be95ff bars true -> platform/orchestration #0f62fe bars true -> runtime/execution #4d4d4d bars false -> deliverables/releases/hardware #262626 CARDS false.
+   Other allowed accents: #08bdba teal, #42be65 green, #ff832b orange, #4589ff light blue, #f1c21b yellow. Never red (#da1e28).
+3. Periods: 6 to 12. Labels short ("Q1 2026", "2027", "Week 3"). Each period has a one-sentence outcome-style narrative (<= 110 chars). Periods before `today` get status "completed", the `today` period "on-target" (or "at-risk"/"delayed" if the user says so), later periods null.
+4. `today` points at the real current period, ideally 40-60% across the timeline.
+5. Each bars lane: optionally ONE umbrella spanning the lane's active range, then a contiguous chain of bars, plus "row":2 for parallel work. 3+ elements per lane. No empty lanes.
+6. Cards lane: one card per period (or span 2 for a continued generation). Card blocks in order: title, subtitle (e.g. "(v2)"), chip (category), metrics (1-2 short lines, "label | value" allowed). Use "entries" on at most one overview card.
+7. Titles: bar <= 28 chars, umbrella <= 24 chars, noun phrases, no full sentences. A 1-period bar fits ~14 chars; longer titles need span >= 2.
+8. Statuses: completed for past, on-target for current, null for future. Do not badge every element. Umbrellas: null or completed.
+9. Element count: 20-35 for 5-6 lanes, 8-15 for 3-4 lanes.
+10. story: 4-6 steps ordered BOTTOM lane first (foundation) up to the top lane (applications). Each step: short title (1 word), 1-2 sentence text, laneIds of the lane(s) it covers, elementIds [].
+11. Single section is fine: one section with laneIds listing every lane in order.
+12. IDs: lanes short slugs ("dev","orch","hw"); elements "e1","e2",... cards "c1","c2",...; story "st1"... All unique.
+
+## 4. ANTI-PATTERNS (never output)
+cards in several lanes; cards lane not last; bars with gaps everywhere (no arrows); sentences as titles; >3 rows per lane; statuses on everything; >6 lanes; pastTint:true on the cards lane or on #4d4d4d/#262626 lanes; overlapping spans in the same explicit row; span index >= periods.length; laneId not in lanes; lane missing from sections[].laneIds; missing narratives or story; markdown fences or prose around the JSON.
+
+## 5. SELF-CHECK BEFORE ANSWERING
+- JSON parses. periods.length >= 1. Every span in range. Every laneId exists. Every lane id is in sections[0].laneIds. Every element has a title block. Only the 6 STATUS strings or null. Only the 4 variants.
+- Last lane kind is "cards" and holds all cards. >= 80% bars/umbrellas. Bar chains are contiguous. Every period has a narrative. 4-6 story steps.
+
+## 6. MINIMAL EXAMPLE (shape reference, 4 periods, 2 lanes)
+{"title":"Platform Roadmap","today":1,"periods":[{"label":"Q1","status":"completed","narrative":"Shipped the core API."},{"label":"Q2","status":"on-target","narrative":"Rolling out SDKs to early adopters."},{"label":"Q3","status":null,"narrative":"General availability across regions."},{"label":"Q4","status":null,"narrative":"Enterprise controls and scale."}],"sections":[{"id":"s1","title":"Platform","subtitle":"Roadmap","collapsed":false,"laneIds":["plat","rel"]}],"lanes":[{"id":"plat","title":"Platform services","color":"#0f62fe","kind":"bars","pastTint":true},{"id":"rel","title":"Releases","color":"#262626","kind":"cards","pastTint":false}],"elements":[{"id":"e1","laneId":"plat","variant":"umbrella","span":{"start":0,"end":3},"status":null,"row":"auto","blocks":[{"type":"title","text":"Core platform"}],"meta":{"owner":"","tags":[],"link":""}},{"id":"e2","laneId":"plat","variant":"bar","span":{"start":0,"end":0},"status":"completed","row":"auto","blocks":[{"type":"title","text":"Core API"}],"meta":{"owner":"","tags":[],"link":""}},{"id":"e3","laneId":"plat","variant":"bar","span":{"start":1,"end":2},"status":"on-target","row":"auto","blocks":[{"type":"title","text":"SDKs and tooling"}],"meta":{"owner":"","tags":[],"link":""}},{"id":"e4","laneId":"plat","variant":"bar","span":{"start":3,"end":3},"status":null,"row":"auto","edge":"out","blocks":[{"type":"title","text":"Scale"}],"meta":{"owner":"","tags":[],"link":""}},{"id":"c1","laneId":"rel","variant":"card","span":{"start":0,"end":0},"status":"completed","row":"auto","blocks":[{"type":"title","text":"Alpha"},{"type":"subtitle","text":"(v0.9)"},{"type":"chip","label":"Preview","tone":"neutral"},{"type":"metrics","lines":["3 services | 1 region"]}],"meta":{"owner":"","tags":[],"link":""}},{"id":"c2","laneId":"rel","variant":"card","span":{"start":1,"end":1},"status":"on-target","row":"auto","tone":"muted","blocks":[{"type":"title","text":"Beta"},{"type":"subtitle","text":"(v1.0)"},{"type":"chip","label":"Early access","tone":"neutral"},{"type":"metrics","lines":["8 services | 2 regions"]}],"meta":{"owner":"","tags":[],"link":""}},{"id":"c3","laneId":"rel","variant":"card","span":{"start":2,"end":3},"status":null,"row":"auto","blocks":[{"type":"title","text":"GA"},{"type":"subtitle","text":"(v2.0)"},{"type":"chip","label":"Production","tone":"neutral"},{"type":"metrics","lines":["12 services | 5 regions"]}],"meta":{"owner":"","tags":[],"link":""}}],"story":[{"id":"st1","title":"Releases","text":"Alpha to GA over four quarters.","laneIds":["rel"],"elementIds":[]},{"id":"st2","title":"Platform","text":"Core API first, then SDKs, then scale.","laneIds":["plat"],"elementIds":[]}]}
+</script>
+
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -257,6 +324,39 @@ pre.json{background:var(--ins-section);border-radius:4px;padding:8px;font-family
 .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#161616;color:#fff;padding:6px 12px;border-radius:4px;opacity:0;transition:opacity .15s;pointer-events:none;z-index:60}
 .toast.on{opacity:1}
 #credits{position:fixed;bottom:10px;right:12px;font-size:10px;color:#a8a8a8;letter-spacing:.04em;pointer-events:none;z-index:50;font-family:inherit}
+/* help */
+.top-title-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.top-guide-btn{height:28px;padding:0 12px;display:flex;align-items:center;gap:6px;border-radius:4px;background:#262626;color:#f4f4f4;font-size:12px;font-weight:500;border:1px solid #393939;transition:all .12s;cursor:pointer}
+.top-guide-btn:hover{background:#393939;color:#fff;border-color:#525252}
+.top-guide-btn svg{color:#0f62fe}
+.help-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:#c6c6c6;transition:background .12s,color .12s}
+.help-btn:hover{background:#393939;color:#fff}
+.help-btn[aria-expanded="true"]{background:#fff;color:#161616}
+.help-btn:focus-visible,.help-x:focus-visible,.help-act:focus-visible,.top-guide-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.help-panel{position:fixed;top:62px;right:16px;width:400px;max-width:calc(100vw - 32px);max-height:calc(100vh - 78px);display:flex;flex-direction:column;background:#fff;color:var(--t1);border:1px solid var(--ins-border);border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:70;animation:pin .12s ease-out;font-size:13px;line-height:20px}
+.help-panel[hidden]{display:none}
+.help-body{flex:1;overflow-y:auto;padding:24px 20px 20px}
+.help-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.help-head b{font-size:14px;font-weight:600}
+.help-x{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:4px;color:var(--t2)}
+.help-x:hover{background:var(--ins-field);color:var(--t1)}
+.help-lead{margin:0 0 16px;color:var(--t2);line-height:1.5}
+.help-panel code{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--ins-field);padding:1px 4px;border-radius:3px}
+.help-steps{margin:0 0 20px;padding-left:20px;display:grid;gap:10px}
+.help-steps li{line-height:1.5}
+.help-steps li::marker{font-weight:600;color:var(--t2)}
+.help-check{display:flex;gap:8px;align-items:flex-start;color:var(--t1);cursor:pointer;margin-bottom:0}
+.help-check input{margin:3px 0 0;accent-color:#0f62fe;flex:none}
+.help-footer{flex:none;border-top:1px solid var(--ins-border);padding:14px 20px 0;background:#fff;display:flex;flex-direction:column;gap:12px}
+.help-actions{display:flex;gap:0;margin:0 -20px}
+.help-act{flex:1;height:64px;padding:0 20px;border-radius:0;border:0;font-weight:400;font-size:14px;color:#fff;background:#3d3d3d;display:flex;align-items:center;justify-content:flex-start;white-space:nowrap;transition:background .1s}
+.help-act:hover{background:#4c4c4c}
+.help-act:active{background:#6f6f6f}
+.help-act.primary{background:#3b5cf5}
+.help-act.primary:hover{background:#2f4fe0}
+.help-act.primary:active{background:#2440c4}
+.help-act:focus-visible{outline:2px solid #fff;outline-offset:-3px}
+.canvas-fs .help-panel{display:none!important}
 /* canvas fullscreen */
 .canvas-fs .top,.canvas-fs .left,.canvas-fs .left-toggle,.canvas-fs .ins{display:none!important}
 .canvas-fs .app{grid-template-rows:1fr}
@@ -275,12 +375,70 @@ pre.json{background:var(--ins-section);border-radius:4px;padding:8px;font-family
 .today-slider{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--ins-border);outline:none;cursor:pointer}
 .today-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#161616;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #161616}
 .today-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#161616;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #161616}
+/* Onboarding Modal - IBM Carbon Design Language */
+.ob-overlay{position:fixed;inset:0;background:rgba(22,22,22,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:250;padding:16px;animation:obFadeIn .2s ease-out}
+.ob-overlay[hidden]{display:none!important}
+@keyframes obFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes obSlideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.ob-card{width:900px;max-width:100%;max-height:calc(100vh - 32px);background:#fff;color:var(--t1);display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.35);border:1px solid var(--ins-border);animation:obSlideUp .22s cubic-bezier(0,0,.2,1);position:relative;overflow:hidden}
+.ob-head{display:flex;align-items:flex-start;justify-content:space-between;padding:22px 28px 16px;border-bottom:1px solid var(--ins-border);background:#fff}
+.ob-eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#0f62fe;margin-bottom:4px}
+.ob-title-wrap h2{font-size:20px;font-weight:500;line-height:26px;margin:0;color:var(--t1)}
+.ob-close-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:4px;color:var(--t2);transition:background .12s,color .12s;cursor:pointer;margin:-4px -8px 0 0}
+.ob-close-btn:hover{background:var(--ins-field);color:var(--t1)}
+.ob-close-btn:focus-visible{outline:2px solid #0f62fe;outline-offset:2px}
+.ob-tabs{display:flex;border-bottom:1px solid var(--ins-border);background:#f4f4f4;overflow-x:auto}
+.ob-tab{flex:1;min-width:130px;padding:12px 14px;display:flex;align-items:center;gap:8px;border:0;border-bottom:2px solid transparent;background:transparent;color:var(--t2);font-size:12px;font-weight:400;cursor:pointer;transition:all .15s ease;white-space:nowrap}
+.ob-tab:hover{background:#e8e8e8;color:var(--t1)}
+.ob-tab.active{background:#fff;color:var(--t1);font-weight:600;border-bottom:2px solid #0f62fe}
+.ob-tab-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#0f62fe;font-weight:600}
+.ob-tab:not(.active) .ob-tab-num{color:var(--t3)}
+.ob-body{flex:1;overflow-y:auto;padding:24px 28px}
+.ob-slide{display:none;grid-template-columns:1.15fr 1fr;gap:28px;align-items:center}
+.ob-slide.active{display:grid}
+@media(max-width:760px){.ob-slide{grid-template-columns:1fr;gap:20px}}
+.ob-art{background:#f4f4f4;border:1px solid var(--ins-border);border-radius:4px;padding:14px;display:flex;align-items:center;justify-content:center;min-height:260px;box-shadow:inset 0 1px 3px rgba(0,0,0,.02)}
+.ob-art svg{width:100%;height:auto;max-height:260px}
+.ob-info{display:flex;flex-direction:column;gap:14px}
+.ob-info h3{font-size:17px;font-weight:600;line-height:23px;margin:0;color:var(--t1)}
+.ob-info p{font-size:12.5px;line-height:19px;color:#393939;margin:0}
+.ob-feature-list{display:flex;flex-direction:column;gap:10px;margin-top:2px}
+.ob-feature-item{display:flex;align-items:flex-start;gap:10px;font-size:12px;line-height:18px;color:var(--t1)}
+.ob-feature-icon{width:20px;height:20px;border-radius:3px;background:#edf5ff;color:#0f62fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.ob-feature-text b{font-weight:600;color:var(--t1)}
+.ob-shortcut-pill{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:1px 5px;background:var(--ins-field);border:1px solid var(--ins-border-strong);border-radius:3px;color:var(--t1);font-weight:500}
+.ob-quick-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.ob-quick-btn{height:30px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;background:var(--ins-field);border:1px solid var(--ins-border);color:var(--t1);font-size:11.5px;font-weight:500;border-radius:3px;cursor:pointer;transition:all .12s}
+.ob-quick-btn:hover{background:#0f62fe;color:#fff;border-color:#0f62fe}
+.ob-foot{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-top:1px solid var(--ins-border);background:#f4f4f4;gap:16px}
+.ob-foot-left{display:flex;align-items:center;gap:8px}
+.ob-foot-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);cursor:pointer;user-select:none}
+.ob-foot-check input{accent-color:#0f62fe;cursor:pointer;margin:0}
+.ob-pips{display:flex;align-items:center;gap:6px}
+.ob-pip{width:8px;height:8px;border-radius:50%;background:var(--ins-border-strong);cursor:pointer;border:0;transition:all .15s ease}
+.ob-pip.active{background:#0f62fe;width:22px;border-radius:4px}
+.ob-foot-right{display:flex;align-items:center;gap:8px}
+.ob-btn{height:36px;padding:0 18px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;cursor:pointer;border:0;border-radius:0;transition:background .12s}
+.ob-btn-ghost{background:transparent;color:var(--t2)}
+.ob-btn-ghost:hover{background:#e8e8e8;color:var(--t1)}
+.ob-btn-secondary{background:#393939;color:#fff}
+.ob-btn-secondary:hover{background:#4c4c4c}
+.ob-btn-primary{background:#0f62fe;color:#fff}
+.ob-btn-primary:hover{background:#0353e9}
+.ob-btn-primary:active{background:#002d9c}
+.ob-btn:focus-visible{outline:2px solid #0f62fe;outline-offset:2px}
+.canvas-fs .ob-overlay{display:none!important}
 </style>
 </head>
 <body>
 <div class="app">
   <header class="top">
-    <div class="top-title"><div class="brand"><span class="brand-ibm">IBM <span>Roadmap Builder</span></span></div></div>
+    <div class="top-title"><div class="brand"><span class="brand-ibm">IBM <span>Roadmap Builder</span></span></div>
+      <div class="top-title-right">
+        <button class="top-guide-btn" id="tourBtn" title="Feature guide and visual tour" aria-label="Feature Guide and Tour"><svg width="14" height="14" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 2a14 14 0 1 0 14 14A14 14 0 0 0 16 2zm1 21h-2v-8h2zm-1-10a1.5 1.5 0 1 1 1.5-1.5A1.5 1.5 0 0 1 16 13z"/></svg><span>Guide</span></button>
+        <button class="help-btn" id="helpBtn" title="Help: using Copilot or Bob to generate a roadmap" aria-label="Help: using Copilot or Bob to generate a roadmap" aria-haspopup="dialog" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M16 2a14 14 0 1 0 14 14A14 14 0 0 0 16 2zm0 26a12 12 0 1 1 12-12 12 12 0 0 1-12 12z"/><circle cx="16" cy="23.5" r="1.5"/><path d="M17 8h-1.5a4.49 4.49 0 0 0-4.5 4.5v.5h2v-.5a2.5 2.5 0 0 1 2.5-2.5H17a2.5 2.5 0 0 1 0 5h-2v4.5h2V17a4.5 4.5 0 0 0 0-9z"/></svg></button>
+      </div>
+    </div>
     <div class="top-bar">
     <div class="tb-title">
       <span class="tb-title-text" id="tbDocTitle" contenteditable="true" spellcheck="false" role="textbox" aria-label="Roadmap title"></span>
@@ -300,8 +458,7 @@ pre.json{background:var(--ins-section);border-radius:4px;padding:8px;font-family
       <button class="tb" id="redoBtn" title="Redo ⇧⌘Z" style="justify-content:center;padding:0;width:30px;min-width:30px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M11 3.5l3 3-3 3M14 6.5H6.5a4 4 0 000 8H9"/></svg></button>
       <span class="tsep"></span>
       <button class="tb" id="zOut" title="Zoom out" style="justify-content:center;padding:0;width:28px;min-width:28px"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3 7.5h10v1H3z"/></svg></button><span class="zoom mono" id="zLbl">80%</span><button class="tb" id="zIn" title="Zoom in" style="justify-content:center;padding:0;width:28px;min-width:28px"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3v4H4v1h4v4h1V8h4V7H9V3z"/></svg></button>
-      <button class="tb" id="importBtn" title="Import JSON"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L3 6l.7.7L7.2 3.2V11h1V3.2l3.5 3.5.7-.7L8 1zM2 13h12v1H2z"/></svg>Import</button>
-      <input type="file" id="importFile" accept=".json,application/json" hidden>
+      <button class="tb" id="pasteBtn" title="Import roadmap JSON from the clipboard"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L3 6l.7.7L7.2 3.2V11h1V3.2l3.5 3.5.7-.7L8 1zM2 13h12v1H2z"/></svg>Import</button>
       <button class="tb" id="exportBtn" title="Export"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 11l5-5-.7-.7L8.8 8.8V1h-1v7.8L4.3 5.3l-.7.7 5 5zM2 13h12v1H2z"/></svg>Export</button>
       <span class="tsep"></span>
       <button class="tb-primary" id="storyBtn" title="Story mode"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><polygon points="13 11 13 21 21 16 13 11"/><path d="m28,6H4c-1.103,0-2,.8975-2,2v16c0,1.1025.897,2,2,2h24c1.103,0,2-.8975,2-2V8c0-1.1025-.897-2-2-2Zm0,18H4V8h24v16Z"/></svg>Story</button>
@@ -316,6 +473,538 @@ pre.json{background:var(--ins-section);border-radius:4px;padding:8px;font-family
     <aside class="ins" id="ins"></aside>
   </div>
 </div>
+<div class="help-panel" id="helpPanel" role="dialog" aria-label="Generate a roadmap with Copilot or Bob" hidden>
+  <div class="help-body">
+    <div class="help-head"><b>Generate a roadmap with AI</b><button class="help-x" id="helpClose" aria-label="Close help"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M12 4.7L11.3 4 8 7.3 4.7 4 4 4.7 7.3 8 4 11.3l.7.7L8 8.7l3.3 3.3.7-.7L8.7 8z"/></svg></button></div>
+    <p class="help-lead">Copy the full prompt and paste it into Copilot, Bob, or ChatGPT. The prompt already contains the JSON schema and design rules — no file needed.</p>
+    <ol class="help-steps">
+      <li><b>Copy full prompt</b> using the button below.</li>
+      <li><b>Paste and fill in the blank.</b> Ticked: replace <code>Requested change</code> to edit the current roadmap. Unticked: fill in <code>Topic</code>, <code>Periods</code>, <code>Lanes</code>, <code>Deliverables</code>.</li>
+      <li><b>Copy the JSON reply</b> — the AI returns one object only.</li>
+      <li><b>Click Import</b> in the top bar to load it.</li>
+      <li><b>Refine.</b> Describe the change, paste the new JSON. If an import error appears, paste it back to the AI.</li>
+    </ol>
+  </div>
+  <div class="help-footer">
+    <label class="help-check"><input type="checkbox" id="helpInclDoc" checked> Include current roadmap so the AI edits what is on screen</label>
+    <div class="help-actions">
+      <button class="help-act primary" id="helpCopyRules" title="Full prompt with rules. No file needed.">Copy full prompt</button>
+      <button class="help-act" id="helpCopyPrompt" title="Short prompt. Attach index.html to the chat first.">Copy short prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding Modal - Illustrated Feature Guide (IBM Carbon Style) -->
+<div class="ob-overlay" id="obModal" role="dialog" aria-modal="true" aria-labelledby="obTitle" hidden>
+  <div class="ob-card">
+    <div class="ob-head">
+      <div class="ob-title-wrap">
+        <div class="ob-eyebrow">IBM Carbon Design Language</div>
+        <h2 id="obTitle">Welcome to IBM Roadmap Builder</h2>
+      </div>
+      <button class="ob-close-btn" id="obClose" aria-label="Close Guide" title="Close (Esc)"><svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6L24 9.4z"/></svg></button>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="ob-tabs" role="tablist" aria-label="Feature Guide Steps">
+      <button class="ob-tab active" data-obtab="0" role="tab" aria-selected="true" id="obTab0"><span class="ob-tab-num">01</span><span>Swimlanes &amp; Bars</span></button>
+      <button class="ob-tab" data-obtab="1" role="tab" aria-selected="false" id="obTab1"><span class="ob-tab-num">02</span><span>Canvas &amp; Editing</span></button>
+      <button class="ob-tab" data-obtab="2" role="tab" aria-selected="false" id="obTab2"><span class="ob-tab-num">03</span><span>Story Mode</span></button>
+      <button class="ob-tab" data-obtab="3" role="tab" aria-selected="false" id="obTab3"><span class="ob-tab-num">04</span><span>AI &amp; MCP</span></button>
+      <button class="ob-tab" data-obtab="4" role="tab" aria-selected="false" id="obTab4"><span class="ob-tab-num">05</span><span>Export &amp; Templates</span></button>
+    </div>
+
+    <!-- Content Slides -->
+    <div class="ob-body" id="obBody">
+      <!-- Slide 0: Swimlanes & Chevron Bars -->
+      <div class="ob-slide active" data-obslide="0">
+        <div class="ob-art">
+          <svg viewBox="0 0 420 250" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Swimlanes and Bars Illustration">
+            <rect width="420" height="250" fill="#ffffff" rx="4"/>
+            <rect x="0.5" y="0.5" width="419" height="249" stroke="#e0e0e0" rx="3.5"/>
+            <rect x="0" y="0" width="420" height="28" fill="#f4f4f4"/>
+            <line x1="0" y1="28" x2="420" y2="28" stroke="#e0e0e0"/>
+            <text x="12" y="18" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="600" fill="#6f6f73">WORKSTREAMS</text>
+            <text x="115" y="18" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#525252">Q1</text>
+            <text x="175" y="18" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#525252">Q2</text>
+            <text x="235" y="18" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#525252">Q3</text>
+            <text x="295" y="18" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#525252">Q4</text>
+            <text x="360" y="18" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#525252">2026</text>
+            <line x1="100" y1="0" x2="100" y2="250" stroke="#f0f0f0" stroke-dasharray="2 2"/>
+            <line x1="160" y1="0" x2="160" y2="250" stroke="#f0f0f0" stroke-dasharray="2 2"/>
+            <line x1="220" y1="0" x2="220" y2="250" stroke="#f0f0f0" stroke-dasharray="2 2"/>
+            <line x1="280" y1="0" x2="280" y2="250" stroke="#f0f0f0" stroke-dasharray="2 2"/>
+            <line x1="340" y1="0" x2="340" y2="250" stroke="#f0f0f0" stroke-dasharray="2 2"/>
+
+            <!-- Today marker -->
+            <line x1="220" y1="0" x2="220" y2="250" stroke="#0f62fe" stroke-width="1.5"/>
+            <rect x="206" y="2" width="28" height="14" rx="2" fill="#0f62fe"/>
+            <text x="220" y="12" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#fff" text-anchor="middle">TODAY</text>
+
+            <!-- Lane 1: Applications -->
+            <rect x="0" y="28" width="100" height="52" fill="#fff0f7"/>
+            <rect x="0" y="28" width="4" height="52" fill="#ff7eb6"/>
+            <text x="10" y="58" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#161616">Applications</text>
+            <line x1="0" y1="80" x2="420" y2="80" stroke="#e0e0e0"/>
+
+            <!-- Umbrella -->
+            <rect x="106" y="33" width="168" height="14" rx="2" fill="#ff7eb6" fill-opacity="0.18" stroke="#ff7eb6" stroke-width="1" stroke-dasharray="3 2"/>
+            <text x="114" y="43" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#9f1853">Algorithms Suite (Phase 1)</text>
+
+            <!-- Chained Chevron Bars -->
+            <path d="M 106 51 L 158 51 L 166 62.5 L 158 74 L 106 74 Z" fill="#ff7eb6"/>
+            <text x="112" y="65" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="500" fill="#161616">Functions</text>
+            <circle cx="152" cy="62.5" r="4.5" fill="#42be65"/>
+            <path d="M 150 62.5 L 151.5 64 L 154 61" stroke="#fff" stroke-width="1" fill="none"/>
+
+            <path d="M 160 51 L 216 51 L 224 62.5 L 216 74 L 160 74 L 168 62.5 Z" fill="#ff7eb6"/>
+            <text x="173" y="65" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="500" fill="#161616">Toolkit (v2)</text>
+            <circle cx="212" cy="62.5" r="4.5" fill="#0f62fe"/>
+            <circle cx="212" cy="62.5" r="2" fill="#fff"/>
+
+            <path d="M 218 51 L 330 51 L 338 62.5 L 330 74 L 218 74 L 226 62.5 Z" fill="#ff7eb6" fill-opacity="0.6"/>
+            <text x="232" y="65" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="500" fill="#161616">App Libraries</text>
+
+            <!-- Lane 2: Platform -->
+            <rect x="0" y="80" width="100" height="52" fill="#edf5ff"/>
+            <rect x="0" y="80" width="4" height="52" fill="#0f62fe"/>
+            <text x="10" y="110" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#161616">Platform</text>
+            <line x1="0" y1="132" x2="420" y2="132" stroke="#e0e0e0"/>
+
+            <path d="M 106 91 L 204 91 L 212 102.5 L 204 114 L 106 114 Z" fill="#0f62fe"/>
+            <text x="114" y="105" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="500" fill="#fff">Serverless Runtime</text>
+
+            <!-- Milestone -->
+            <polygon points="252,93 261,102.5 252,112 243,102.5" fill="#0f62fe" stroke="#fff" stroke-width="1.5"/>
+            <text x="267" y="105" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="600" fill="#0f62fe">GA Launch</text>
+
+            <rect x="106" y="117" width="104" height="11" rx="1.5" fill="#a6c8ff"/>
+            <text x="110" y="125" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" font-weight="500" fill="#002d9c">C API &amp; SDKs</text>
+
+            <!-- Lane 3: Hardware Cards -->
+            <rect x="0" y="132" width="100" height="118" fill="#161616"/>
+            <text x="10" y="172" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#fff">Hardware &amp;</text>
+            <text x="10" y="186" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#fff">Releases</text>
+
+            <rect x="106" y="138" width="56" height="102" rx="2" fill="#262626" stroke="#393939"/>
+            <text x="112" y="154" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="600" fill="#fff">Eagle</text>
+            <rect x="112" y="160" width="44" height="12" rx="2" fill="#393939"/>
+            <text x="116" y="169" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#c6c6c6">127 qubits</text>
+            <text x="112" y="185" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#8d8d8d">Benchmarking</text>
+
+            <rect x="168" y="138" width="56" height="102" rx="2" fill="#262626" stroke="#0f62fe" stroke-width="1.5"/>
+            <text x="174" y="154" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="600" fill="#fff">Heron</text>
+            <text x="174" y="164" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#0f62fe">(5K)</text>
+            <rect x="174" y="170" width="44" height="12" rx="2" fill="#0f62fe"/>
+            <text x="178" y="179" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#fff">133 qubits</text>
+            <text x="174" y="196" font-family="'IBM Plex Sans', sans-serif" font-size="7" fill="#8d8d8d">Mitigation</text>
+
+            <rect x="230" y="138" width="112" height="102" rx="2" fill="#262626" stroke="#393939"/>
+            <text x="238" y="154" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="600" fill="#fff">Nighthawk (Gen 2)</text>
+            <rect x="238" y="162" width="68" height="14" rx="2" fill="#393939"/>
+            <text x="242" y="172" font-family="'IBM Plex Sans', sans-serif" font-size="8" fill="#42be65">Up to 1080 qubits</text>
+            <text x="238" y="192" font-family="'IBM Plex Sans', sans-serif" font-size="8" fill="#c6c6c6">Quantum + HPC</text>
+            <text x="238" y="204" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#8d8d8d">Multi-chip scaling</text>
+          </svg>
+        </div>
+        <div class="ob-info">
+          <h3>Visual Swimlanes &amp; Chained Chevrons</h3>
+          <p>Model complex multi-year strategies and engineering roadmaps using IBM Carbon design standards and official chevron arrow mechanics.</p>
+          <div class="ob-feature-list">
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Automatic Chevron Arrowheads:</b> Adjacent bars in the same row snap into contiguous arrow chains with matching notches.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Umbrella Phase Brackets:</b> Spanning headers group sub-tracks across time horizons.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Milestones &amp; Dark Cards Lane:</b> Highlight key releases and deliverables with KPI metrics, tags, and owners.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Live Status Badges:</b> Completed, On target, At risk, Delayed, or Not started.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 1: Interactive Canvas & In-Place Editing -->
+      <div class="ob-slide" data-obslide="1">
+        <div class="ob-art">
+          <svg viewBox="0 0 420 250" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Interactive Canvas Illustration">
+            <rect width="420" height="250" fill="#ffffff" rx="4"/>
+            <rect x="0.5" y="0.5" width="419" height="249" stroke="#e0e0e0" rx="3.5"/>
+            <rect x="0" y="0" width="260" height="250" fill="#f8f8f9"/>
+            <line x1="260" y1="0" x2="260" y2="250" stroke="#e0e0e0"/>
+
+            <rect x="12" y="12" width="236" height="26" fill="#fff" rx="3" stroke="#0f62fe" stroke-width="1.2"/>
+            <text x="22" y="28" font-family="'IBM Plex Sans', sans-serif" font-size="11" font-weight="600" fill="#161616">Product Roadmap 2026</text>
+            <line x1="148" y1="18" x2="148" y2="32" stroke="#0f62fe" stroke-width="1.5"/>
+
+            <rect x="12" y="48" width="236" height="110" fill="#fff" rx="3" stroke="#e0e0e0"/>
+            <text x="20" y="64" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="600" fill="#6f6f73">CORE PLATFORM STREAM</text>
+
+            <path d="M 30 76 L 190 76 L 198 92 L 190 108 L 30 108 Z" fill="#0f62fe"/>
+            <text x="44" y="96" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="500" fill="#fff">Enterprise API Services</text>
+
+            <rect x="26" y="72" width="176" height="40" rx="3" fill="none" stroke="#0f62fe" stroke-width="2" stroke-dasharray="4 2"/>
+            <rect x="23" y="86" width="6" height="12" rx="1" fill="#fff" stroke="#0f62fe" stroke-width="1.5"/>
+            <rect x="199" y="86" width="6" height="12" rx="1" fill="#fff" stroke="#0f62fe" stroke-width="1.5"/>
+
+            <rect x="176" y="52" width="50" height="16" rx="2" fill="#161616"/>
+            <text x="201" y="63" font-family="'IBM Plex Mono', monospace" font-size="8.5" font-weight="500" fill="#fff" text-anchor="middle">Q1 → Q3</text>
+
+            <rect x="12" y="168" width="236" height="70" fill="#fff" rx="3" stroke="#e0e0e0"/>
+            <text x="20" y="184" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="600" fill="#161616">KEYBOARD SHORTCUTS</text>
+
+            <rect x="20" y="194" width="20" height="18" rx="2" fill="#f4f4f4" stroke="#d1d1d4"/>
+            <text x="30" y="207" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="600" fill="#161616" text-anchor="middle">B</text>
+            <text x="45" y="207" font-family="'IBM Plex Sans', sans-serif" font-size="9" fill="#525252">Bar</text>
+
+            <rect x="75" y="194" width="20" height="18" rx="2" fill="#f4f4f4" stroke="#d1d1d4"/>
+            <text x="85" y="207" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="600" fill="#161616" text-anchor="middle">U</text>
+            <text x="100" y="207" font-family="'IBM Plex Sans', sans-serif" font-size="9" fill="#525252">Umb</text>
+
+            <rect x="130" y="194" width="22" height="18" rx="2" fill="#f4f4f4" stroke="#d1d1d4"/>
+            <text x="141" y="207" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="600" fill="#161616" text-anchor="middle">[ ]</text>
+            <text x="156" y="207" font-family="'IBM Plex Sans', sans-serif" font-size="9" fill="#525252">Span</text>
+
+            <rect x="190" y="194" width="26" height="18" rx="2" fill="#f4f4f4" stroke="#d1d1d4"/>
+            <text x="203" y="207" font-family="'IBM Plex Mono', monospace" font-size="8.5" font-weight="600" fill="#161616" text-anchor="middle">⌘Z</text>
+            <text x="221" y="207" font-family="'IBM Plex Sans', sans-serif" font-size="9" fill="#525252">Undo</text>
+
+            <!-- Inspector Panel -->
+            <rect x="260" y="0" width="160" height="250" fill="#fff"/>
+            <rect x="268" y="10" width="144" height="20" rx="2" fill="#f4f4f4"/>
+            <text x="274" y="24" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="600" fill="#161616">INSPECTOR: BAR</text>
+
+            <text x="268" y="44" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#6f6f73">TITLE</text>
+            <rect x="268" y="48" width="144" height="20" rx="2" fill="#f4f4f4" stroke="#d1d1d4"/>
+            <text x="274" y="62" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" fill="#161616">Enterprise API</text>
+
+            <text x="268" y="82" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#6f6f73">TONE &amp; STYLE</text>
+            <rect x="268" y="86" width="32" height="18" rx="2" fill="#0f62fe"/>
+            <text x="284" y="98" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#fff" text-anchor="middle">Lane</text>
+            <rect x="304" y="86" width="32" height="18" rx="2" fill="#e0e0e0"/>
+            <text x="320" y="98" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#161616" text-anchor="middle">Muted</text>
+            <rect x="340" y="86" width="34" height="18" rx="2" fill="#262626"/>
+            <text x="357" y="98" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#fff" text-anchor="middle">Dark</text>
+
+            <text x="268" y="120" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#6f6f73">PROGRESS</text>
+            <rect x="268" y="126" width="144" height="8" rx="4" fill="#e0e0e0"/>
+            <rect x="268" y="126" width="100" height="8" rx="4" fill="#42be65"/>
+            <text x="268" y="146" font-family="'IBM Plex Mono', monospace" font-size="8" font-weight="600" fill="#42be65">70% Completed</text>
+
+            <text x="268" y="168" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#6f6f73">CARBON PALETTE</text>
+            <circle cx="274" cy="182" r="5" fill="#0f62fe"/>
+            <circle cx="288" cy="182" r="5" fill="#08bdba"/>
+            <circle cx="302" cy="182" r="5" fill="#be95ff"/>
+            <circle cx="316" cy="182" r="5" fill="#ff7eb6"/>
+            <circle cx="330" cy="182" r="5" fill="#42be65"/>
+            <circle cx="344" cy="182" r="5" fill="#ff832b"/>
+            <circle cx="358" cy="182" r="5" fill="#262626"/>
+
+            <rect x="268" y="200" width="144" height="24" rx="2" fill="#161616"/>
+            <text x="340" y="215" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="500" fill="#fff" text-anchor="middle">✓ Applied</text>
+          </svg>
+        </div>
+        <div class="ob-info">
+          <h3>Interactive Canvas &amp; In-Place Editing</h3>
+          <p>Direct visual manipulation with full keyboard support, drag resizing, property inspection, and multi-step undo history.</p>
+          <div class="ob-feature-list">
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Direct Span Dragging &amp; Nudging:</b> Click any bar or card to drag its start/end, or use <span class="ob-shortcut-pill">[</span> and <span class="ob-shortcut-pill">]</span>.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Property Inspector:</b> Edit title, owner, tags, links, progress percentage, custom hex colors, and tone styles.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>In-Place Title &amp; Timeline:</b> Click the roadmap title or period headers to edit directly.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>100-Level Undo / Redo:</b> Never lose an edit with snapshot history via <span class="ob-shortcut-pill">⌘Z</span> / <span class="ob-shortcut-pill">⇧⌘Z</span>.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 2: Guided Story Mode -->
+      <div class="ob-slide" data-obslide="2">
+        <div class="ob-art">
+          <svg viewBox="0 0 420 250" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Story Mode Illustration">
+            <rect width="420" height="250" fill="#161616" rx="4"/>
+            <rect x="0.5" y="0.5" width="419" height="249" stroke="#393939" rx="3.5"/>
+            <rect x="0" y="0" width="420" height="28" fill="#262626"/>
+            <text x="14" y="18" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="600" fill="#fff">STORY PLAYBACK</text>
+            <rect x="340" y="6" width="68" height="16" rx="2" fill="#0f62fe"/>
+            <text x="374" y="17" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#fff" text-anchor="middle">FULLSCREEN</text>
+
+            <rect x="14" y="38" width="140" height="152" rx="3" fill="#262626" stroke="#0f62fe" stroke-width="1.5"/>
+            <text x="22" y="54" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#0f62fe">STEP 2 OF 5</text>
+            <text x="22" y="70" font-family="'IBM Plex Sans', sans-serif" font-size="12" font-weight="600" fill="#fff">Orchestrate</text>
+            <text x="22" y="88" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#c6c6c6">Quantum + HPC workloads</text>
+            <text x="22" y="99" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#c6c6c6">integrate Serverless</text>
+            <text x="22" y="110" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#c6c6c6">execution modes and C API</text>
+            <text x="22" y="121" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#c6c6c6">for scalable performance.</text>
+
+            <rect x="22" y="142" width="124" height="16" rx="2" fill="#0f62fe" fill-opacity="0.2" stroke="#0f62fe" stroke-width="0.8"/>
+            <text x="26" y="153" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" font-weight="500" fill="#78a9ff">Focused on Platform Lane</text>
+
+            <rect x="164" y="38" width="242" height="34" rx="2" fill="#ffffff" fill-opacity="0.12"/>
+            <rect x="170" y="44" width="70" height="22" rx="2" fill="#be95ff" fill-opacity="0.2"/>
+            <text x="176" y="58" font-family="'IBM Plex Sans', sans-serif" font-size="8" fill="#ffffff" fill-opacity="0.3">Algorithms (Dimmed)</text>
+
+            <rect x="164" y="76" width="242" height="52" rx="2" fill="#ffffff" stroke="#0f62fe" stroke-width="2"/>
+            <text x="170" y="90" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="600" fill="#0f62fe">★ WORKLOAD ORCHESTRATION</text>
+            <path d="M 170 96 L 240 96 L 246 108 L 240 120 L 170 120 Z" fill="#0f62fe"/>
+            <text x="176" y="111" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="500" fill="#fff">Serverless</text>
+            <path d="M 248 96 L 330 96 L 336 108 L 330 120 L 248 120 L 254 108 Z" fill="#0f62fe"/>
+            <text x="260" y="111" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="500" fill="#fff">HPC Plugins</text>
+            <rect x="350" y="98" width="48" height="18" rx="2" fill="#0f62fe"/>
+            <text x="374" y="110" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" font-weight="600" fill="#fff" text-anchor="middle">ACTIVE</text>
+
+            <rect x="164" y="132" width="242" height="42" rx="2" fill="#ffffff" fill-opacity="0.12"/>
+            <rect x="170" y="138" width="80" height="28" rx="2" fill="#4d4d4d" fill-opacity="0.2"/>
+            <text x="176" y="155" font-family="'IBM Plex Sans', sans-serif" font-size="8" fill="#ffffff" fill-opacity="0.3">Execution (Dimmed)</text>
+
+            <rect x="110" y="202" width="200" height="34" rx="17" fill="rgba(38,38,38,0.95)" stroke="#525252"/>
+            <circle cx="128" cy="219" r="9" fill="#393939"/>
+            <path d="M 130 215 L 126 219 L 130 223" stroke="#fff" stroke-width="1.2" fill="none"/>
+
+            <text x="144" y="222" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="500" fill="#fff">2/5</text>
+            <rect x="166" y="217" width="10" height="4" rx="2" fill="#6f6f73"/>
+            <rect x="180" y="217" width="18" height="4" rx="2" fill="#0f62fe"/>
+            <rect x="202" y="217" width="10" height="4" rx="2" fill="#6f6f73"/>
+            <rect x="216" y="217" width="10" height="4" rx="2" fill="#6f6f73"/>
+            <rect x="230" y="217" width="10" height="4" rx="2" fill="#6f6f73"/>
+
+            <circle cx="292" cy="219" r="9" fill="#0f62fe"/>
+            <path d="M 290 215 L 294 219 L 290 223" stroke="#fff" stroke-width="1.2" fill="none"/>
+          </svg>
+        </div>
+        <div class="ob-info">
+          <h3>Guided Narrative Story Mode</h3>
+          <p>Transform dense roadmaps into executive slide presentations. Guide stakeholders step-by-step through key milestones and strategic narratives.</p>
+          <div class="ob-feature-list">
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Lane &amp; Element Focusing:</b> Highlights targeted workstreams while softly dimming surrounding elements.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>In-App Story Builder:</b> Add, reorder, duplicate, and edit narrative steps directly in the left panel.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Fullscreen Presentation:</b> Distraction-free playback with keyboard navigation (<span class="ob-shortcut-pill">←</span> / <span class="ob-shortcut-pill">→</span>).</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Period Outcome Stories:</b> Each time period features an outcome narrative in story view.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 3: AI Generation & Local MCP -->
+      <div class="ob-slide" data-obslide="3">
+        <div class="ob-art">
+          <svg viewBox="0 0 420 250" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="AI and MCP Integration Illustration">
+            <rect width="420" height="250" fill="#ffffff" rx="4"/>
+            <rect x="0.5" y="0.5" width="419" height="249" stroke="#e0e0e0" rx="3.5"/>
+
+            <rect x="12" y="12" width="190" height="226" rx="3" fill="#161616"/>
+            <rect x="12" y="12" width="190" height="24" fill="#262626" rx="3 3 0 0"/>
+            <circle cx="24" cy="24" r="3" fill="#da1e28"/>
+            <circle cx="34" cy="24" r="3" fill="#f1c21b"/>
+            <circle cx="44" cy="24" r="3" fill="#42be65"/>
+            <text x="60" y="27" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="600" fill="#fff">AI ROADMAP AGENT</text>
+
+            <rect x="20" y="44" width="174" height="48" rx="2" fill="#262626"/>
+            <text x="26" y="58" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="500" fill="#0f62fe">You:</text>
+            <text x="26" y="70" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#f4f4f4">"Build a 4-quarter AI roadmap with</text>
+            <text x="26" y="81" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#f4f4f4">Design, Core API &amp; watsonx lanes."</text>
+
+            <rect x="20" y="100" width="174" height="88" rx="2" fill="#262626" stroke="#0f62fe" stroke-width="1"/>
+            <text x="26" y="114" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="600" fill="#42be65">Bob / Claude / Copilot:</text>
+            <text x="26" y="128" font-family="'IBM Plex Mono', monospace" font-size="7" fill="#be95ff">{ "title": "AI Roadmap",</text>
+            <text x="26" y="139" font-family="'IBM Plex Mono', monospace" font-size="7" fill="#78a9ff">  "periods": [Q1, Q2, Q3, Q4],</text>
+            <text x="26" y="150" font-family="'IBM Plex Mono', monospace" font-size="7" fill="#ff7eb6">  "lanes": [Design, API, watsonx],</text>
+            <text x="26" y="161" font-family="'IBM Plex Mono', monospace" font-size="7" fill="#42be65">  "elements": [ ... ] }</text>
+            <text x="26" y="178" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#8d8d8d">✓ Validated &amp; schema-compliant</text>
+
+            <rect x="20" y="196" width="174" height="24" rx="2" fill="#0f62fe"/>
+            <text x="107" y="211" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="500" fill="#fff" text-anchor="middle">⚡ 1-Click Clipboard Import</text>
+
+            <circle cx="210" cy="125" r="16" fill="#0f62fe"/>
+            <path d="M 204 125 L 214 120 L 214 123 L 218 123 L 218 127 L 214 127 L 214 130 Z" fill="#fff"/>
+
+            <rect x="220" y="12" width="188" height="226" rx="3" fill="#f8f8f9" stroke="#e0e0e0"/>
+            <rect x="220" y="12" width="188" height="24" fill="#edf5ff" rx="3 3 0 0"/>
+            <text x="230" y="27" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="600" fill="#0f62fe">LOCAL MCP SERVER (13 TOOLS)</text>
+
+            <rect x="228" y="44" width="82" height="16" rx="2" fill="#fff" stroke="#d1d1d4"/>
+            <text x="234" y="55" font-family="'IBM Plex Mono', monospace" font-size="7.5" fill="#161616">add_lane()</text>
+
+            <rect x="314" y="44" width="86" height="16" rx="2" fill="#fff" stroke="#d1d1d4"/>
+            <text x="320" y="55" font-family="'IBM Plex Mono', monospace" font-size="7.5" fill="#161616">add_element()</text>
+
+            <rect x="228" y="64" width="94" height="16" rx="2" fill="#fff" stroke="#d1d1d4"/>
+            <text x="234" y="75" font-family="'IBM Plex Mono', monospace" font-size="7.5" fill="#161616">update_period()</text>
+
+            <rect x="326" y="64" width="74" height="16" rx="2" fill="#fff" stroke="#d1d1d4"/>
+            <text x="332" y="75" font-family="'IBM Plex Mono', monospace" font-size="7.5" fill="#161616">get_deep_link()</text>
+
+            <rect x="228" y="90" width="172" height="136" rx="2" fill="#fff" stroke="#0f62fe" stroke-width="1.2"/>
+            <text x="236" y="104" font-family="'IBM Plex Sans', sans-serif" font-size="8.5" font-weight="600" fill="#161616">LIVE BROWSER CANVAS</text>
+
+            <rect x="234" y="112" width="160" height="26" rx="2" fill="#fff0f7"/>
+            <path d="M 240 116 L 310 116 L 316 125 L 310 134 L 240 134 Z" fill="#ff7eb6"/>
+            <text x="246" y="127" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#161616">Design System</text>
+
+            <rect x="234" y="142" width="160" height="26" rx="2" fill="#edf5ff"/>
+            <path d="M 240 146 L 330 146 L 336 155 L 330 164 L 240 164 Z" fill="#0f62fe"/>
+            <text x="246" y="157" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#fff">Core Engine</text>
+
+            <rect x="234" y="172" width="160" height="46" rx="2" fill="#161616"/>
+            <rect x="240" y="176" width="46" height="38" rx="2" fill="#262626" stroke="#42be65"/>
+            <text x="244" y="190" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" font-weight="600" fill="#fff">watsonx</text>
+            <text x="244" y="202" font-family="'IBM Plex Sans', sans-serif" font-size="6.5" fill="#42be65">GA Launch</text>
+          </svg>
+        </div>
+        <div class="ob-info">
+          <h3>AI Roadmap Generation &amp; Local MCP Tools</h3>
+          <p>Generate production-grade roadmaps from natural language descriptions using Copilot, Bob, ChatGPT, or the local Model Context Protocol server.</p>
+          <div class="ob-feature-list">
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>One-Click AI Prompts:</b> Click the Help button <span class="ob-shortcut-pill">?</span> to copy complete prompts pre-loaded with schema rules.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Local MCP Server:</b> Connect Bob or Claude Desktop to add lanes, update milestones, and get live URLs.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Context-Aware Iteration:</b> Keep "Include current roadmap" checked so the AI makes targeted edits.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Instant Clipboard Import:</b> Click <b>Import</b> in the top bar to paste and render in real time.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 4: Export, Sharing & Templates -->
+      <div class="ob-slide" data-obslide="4">
+        <div class="ob-art">
+          <svg viewBox="0 0 420 250" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Export and Templates Illustration">
+            <rect width="420" height="250" fill="#ffffff" rx="4"/>
+            <rect x="0.5" y="0.5" width="419" height="249" stroke="#e0e0e0" rx="3.5"/>
+
+            <text x="14" y="22" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="600" fill="#161616">ONE-CLICK EXPORT FORMATS</text>
+
+            <rect x="14" y="32" width="90" height="88" rx="3" fill="#f4f4f4" stroke="#e0e0e0"/>
+            <rect x="22" y="42" width="24" height="24" rx="2" fill="#edf5ff"/>
+            <text x="28" y="58" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#0f62fe">&lt;&gt;</text>
+            <text x="22" y="80" font-family="'IBM Plex Sans', sans-serif" font-size="9.5" font-weight="600" fill="#161616">Self-Contained</text>
+            <text x="22" y="92" font-family="'IBM Plex Sans', sans-serif" font-size="8" fill="#6f6f73">HTML File</text>
+            <text x="22" y="106" font-family="'IBM Plex Sans', sans-serif" font-size="7" fill="#0f62fe">Zero dependencies</text>
+
+            <rect x="112" y="32" width="90" height="88" rx="3" fill="#f4f4f4" stroke="#e0e0e0"/>
+            <rect x="120" y="42" width="24" height="24" rx="2" fill="#fff0f1"/>
+            <text x="125" y="58" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="700" fill="#da1e28">PDF</text>
+            <text x="120" y="80" font-family="'IBM Plex Sans', sans-serif" font-size="9.5" font-weight="600" fill="#161616">Print / Exec</text>
+            <text x="120" y="92" font-family="'IBM Plex Sans', sans-serif" font-size="8" fill="#6f6f73">PDF Document</text>
+            <text x="120" y="106" font-family="'IBM Plex Sans', sans-serif" font-size="7" fill="#da1e28">High-res canvas</text>
+
+            <rect x="210" y="32" width="90" height="88" rx="3" fill="#f4f4f4" stroke="#e0e0e0"/>
+            <rect x="218" y="42" width="24" height="24" rx="2" fill="#fff6eb"/>
+            <text x="222" y="58" font-family="'IBM Plex Sans', sans-serif" font-size="8" font-weight="700" fill="#ff832b">PPTX</text>
+            <text x="218" y="80" font-family="'IBM Plex Sans', sans-serif" font-size="9.5" font-weight="600" fill="#161616">PowerPoint</text>
+            <text x="218" y="92" font-family="'IBM Plex Sans', sans-serif" font-size="8" fill="#6f6f73">Slide Presentation</text>
+            <text x="218" y="106" font-family="'IBM Plex Sans', sans-serif" font-size="7" fill="#ff832b">16:9 widescreen</text>
+
+            <rect x="308" y="32" width="98" height="88" rx="3" fill="#edf5ff" stroke="#0f62fe" stroke-width="1.2"/>
+            <rect x="316" y="42" width="24" height="24" rx="2" fill="#0f62fe"/>
+            <text x="322" y="58" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="600" fill="#fff">🔗</text>
+            <text x="316" y="80" font-family="'IBM Plex Sans', sans-serif" font-size="9.5" font-weight="600" fill="#0f62fe">Deep Link</text>
+            <text x="316" y="92" font-family="'IBM Plex Sans', sans-serif" font-size="8" fill="#161616">URL Hash (#doc=)</text>
+            <text x="316" y="106" font-family="'IBM Plex Sans', sans-serif" font-size="7" fill="#0f62fe">No backend needed</text>
+
+            <text x="14" y="142" font-family="'IBM Plex Sans', sans-serif" font-size="10" font-weight="600" fill="#161616">BUILT-IN TEMPLATES</text>
+
+            <rect x="14" y="152" width="124" height="84" rx="3" fill="#f8f8f9" stroke="#d1d1d4"/>
+            <rect x="22" y="160" width="12" height="12" rx="2" fill="#262626"/>
+            <text x="40" y="170" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="600" fill="#161616">IBM Quantum</text>
+            <text x="22" y="188" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#6f6f73">Official 12-period dev roadmap with chevron streams &amp; dark hardware lane.</text>
+
+            <rect x="146" y="152" width="124" height="84" rx="3" fill="#f8f8f9" stroke="#d1d1d4"/>
+            <rect x="154" y="160" width="12" height="12" rx="2" fill="#08bdba"/>
+            <text x="172" y="170" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="600" fill="#161616">Presales POC</text>
+            <text x="154" y="188" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#6f6f73">8-week customer engagement with stakeholder syncs and sprint restitution.</text>
+
+            <rect x="278" y="152" width="128" height="84" rx="3" fill="#f8f8f9" stroke="#d1d1d4"/>
+            <rect x="286" y="160" width="12" height="12" rx="2" fill="#0f62fe"/>
+            <text x="304" y="170" font-family="'IBM Plex Sans', sans-serif" font-size="9" font-weight="600" fill="#161616">Blank Canvas</text>
+            <text x="286" y="188" font-family="'IBM Plex Sans', sans-serif" font-size="7.5" fill="#6f6f73">Clean slate with 4 quarters to structure your custom product timeline from scratch.</text>
+          </svg>
+        </div>
+        <div class="ob-info">
+          <h3>Sharing, Multi-Format Export &amp; Templates</h3>
+          <p>Export in multiple formats or share live roadmaps encoded directly in the URL hash — no backend or accounts required.</p>
+          <div class="ob-feature-list">
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Deep Link URLs:</b> Share full roadmaps encoded in hash fragments (<code>#doc=...</code>).</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Standalone HTML / PDF / PPTX:</b> Export vector-sharp files ready for presentations or offline viewing.</div>
+            </div>
+            <div class="ob-feature-item">
+              <div class="ob-feature-icon">❖</div>
+              <div class="ob-feature-text"><b>Pre-Built Templates:</b> Start instantly with IBM Quantum, Presales POC, or Blank Slate.</div>
+            </div>
+          </div>
+          <div class="ob-quick-actions">
+            <button class="ob-quick-btn" id="obTplQuantum">⚡ Load Quantum Demo</button>
+            <button class="ob-quick-btn" id="obTplPoc">📋 Load Presales POC</button>
+            <button class="ob-quick-btn" id="obTplBlank">✨ Start Blank Canvas</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="ob-foot">
+      <div class="ob-foot-left">
+        <label class="ob-foot-check"><input type="checkbox" id="obDontShow"> Don't show automatically on launch</label>
+      </div>
+      <div class="ob-pips" id="obPips">
+        <button class="ob-pip active" data-obpip="0" aria-label="Slide 1"></button>
+        <button class="ob-pip" data-obpip="1" aria-label="Slide 2"></button>
+        <button class="ob-pip" data-obpip="2" aria-label="Slide 3"></button>
+        <button class="ob-pip" data-obpip="3" aria-label="Slide 4"></button>
+        <button class="ob-pip" data-obpip="4" aria-label="Slide 5"></button>
+      </div>
+      <div class="ob-foot-right">
+        <button class="ob-btn ob-btn-ghost" id="obSkip">Skip Tour</button>
+        <button class="ob-btn ob-btn-secondary" id="obPrev" style="display:none;">Back</button>
+        <button class="ob-btn ob-btn-primary" id="obNext">Next <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.3 3.3L8.6 4 12.1 7.5H2v1h10.1L8.6 12l.7.7 4.7-4.7z"/></svg></button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="pop" id="pop"></div>
 <div class="toast" id="toast"></div>
 
@@ -987,7 +1676,7 @@ function popContent(){
     return `<div class="bgrid">${Object.entries(BLOCKS).map(([t,b])=>{const ok=pr.blocks.includes(t) && (t==='text'||!e.blocks.some(x=>x.type===t)); return `<button data-pb="${t}" ${ok?'':'disabled'}><b>${b.icon}</b>${b.label}</button>`;}).join('')}</div>`;
   }
   if(k==='bmenu') return `<button class="mi" data-pbm="up">Move up<span class="kbd">⌥↑</span></button><button class="mi" data-pbm="down">Move down<span class="kbd">⌥↓</span></button><button class="mi" data-pbm="dup">Duplicate block</button><div class="msep"></div><button class="mi" data-pbm="del">Delete block</button>`;
-  if(k==='export') return `<button class="mi" data-exp="html"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M5.5 4.1L1.6 8l3.9 3.9.7-.7L3 8l3.2-3.2-.7-.7zm5 0l-.7.7L13 8l-3.2 3.2.7.7 3.9-3.9-3.9-3.9zm-2.9-.6l-2 11 .9.2 2-11-.9-.2z"/></svg>Export HTML (canvas)</button><button class="mi" data-exp="json"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M4 2v1H2v2h2v1H2v2h2v1H2v2h2v1H2a1 1 0 01-1-1V3a1 1 0 011-1h2zm8 0h2a1 1 0 011 1v8a1 1 0 01-1 1h-2v-1h2V9h-2V8h2V6h-2V5h2V3h-2V2zM6 5h4v1H6V5zm0 3h4v1H6V8zm0 3h3v1H6v-1z"/></svg>Export JSON</button><button class="mi" data-exp="pdf"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M10.5 1H3a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V4.5L10.5 1zM10 2.2L12.8 5H10V2.2zM3 14V2h6v4h4v8H3z"/><path d="M4.5 8h2a1 1 0 011 1v1a1 1 0 01-1 1h-1v2h-1V8zm1 2h1V9h-1v1zm3.5-2h1.5a1 1 0 011 1v3a1 1 0 01-1 1H9V8zm1 4h.5V9H10v3z"/></svg>Export PDF</button><button class="mi" data-exp="pptx"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M14 2H2a1 1 0 00-1 1v8a1 1 0 001 1h5v2H5v1h6v-1H9v-2h5a1 1 0 001-1V3a1 1 0 00-1-1zm0 9H2V3h12v8z"/><path d="M6 5h3a1 1 0 011 1v1a1 1 0 01-1 1H7v2H6V5zm1 2h2V6H7v1z"/></svg>Export PPTX</button><div class="msep"></div><button class="mi" data-exp="deeplink"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M6.8 8.8l-.7.7c-1 1-1 2.6 0 3.5s2.6 1 3.5 0l2.1-2.1c1-1 1-2.6 0-3.5l-.4-.4-.7.7.4.4c.6.6.6 1.6 0 2.1l-2.1 2.1c-.6.6-1.6.6-2.1 0s-.6-1.6 0-2.1l.7-.7-.7-.8zm2.4-1.6l.7-.7c1-1 1-2.6 0-3.5s-2.6-1-3.5 0L4.3 5.1c-1 1-1 2.6 0 3.5l.4.4.7-.7-.4-.4c-.6-.6-.6-1.6 0-2.1l2.1-2.1c.6-.6 1.6-.6 2.1 0s.6 1.6 0 2.1l-.7.7.7.8zM5.5 9.8l4.3-4.3.7.7-4.3 4.3z"/></svg>Copy deep link</button>`;
+  if(k==='export') return `<button class="mi" data-exp="html"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M5.5 4.1L1.6 8l3.9 3.9.7-.7L3 8l3.2-3.2-.7-.7zm5 0l-.7.7L13 8l-3.2 3.2.7.7 3.9-3.9-3.9-3.9zm-2.9-.6l-2 11 .9.2 2-11-.9-.2z"/></svg>Export HTML (canvas)</button><button class="mi" data-exp="json"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M4 2v1H2v2h2v1H2v2h2v1H2v2h2v1H2a1 1 0 01-1-1V3a1 1 0 011-1h2zm8 0h2a1 1 0 011 1v8a1 1 0 01-1 1h-2v-1h2V9h-2V8h2V6h-2V5h2V3h-2V2zM6 5h4v1H6V5zm0 3h4v1H6V8zm0 3h3v1H6v-1z"/></svg>Export JSON</button><button class="mi" data-exp="pdf"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M10.5 1H3a1 1 0 00-1 1v12a1 1 0 001 1h10a1 1 0 001-1V4.5L10.5 1zM10 2.2L12.8 5H10V2.2zM3 14V2h6v4h4v8H3z"/><path d="M4.5 8h2a1 1 0 011 1v1a1 1 0 01-1 1h-1v2h-1V8zm1 2h1V9h-1v1zm3.5-2h1.5a1 1 0 011 1v3a1 1 0 01-1 1H9V8zm1 4h.5V9H10v3z"/></svg>Export PDF</button><button class="mi" data-exp="pptx"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="flex:none"><path d="M14 2H2a1 1 0 00-1 1v8a1 1 0 001 1h5v2H5v1h6v-1H9v-2h5a1 1 0 001-1V3a1 1 0 00-1-1zm0 9H2V3h12v8z"/><path d="M6 5h3a1 1 0 011 1v1a1 1 0 01-1 1H7v2H6V5zm1 2h2V6H7v1z"/></svg>Export PPTX</button>`;
   if(k==='template') return Object.entries(TEMPLATES).map(([id,t])=>`<button class="mi" data-tpl="${id}">${t.label}</button>`).join('');
   return '';
 }
@@ -1355,20 +2044,81 @@ $('#undoBtn').onclick=undo; $('#redoBtn').onclick=redo;
 $('#zIn').onclick=()=>{ S.zoom=Math.min(1.5,+(S.zoom+.1).toFixed(2)); renderCanvas(); };
 $('#zOut').onclick=()=>{ S.zoom=Math.max(.4,+(S.zoom-.1).toFixed(2)); renderCanvas(); };
 $('#exportBtn').onclick=(ev)=>{ ev.stopPropagation(); openPop('export', $('#exportBtn')); };
-$('#importBtn').onclick=()=>{ $('#importFile').value=''; $('#importFile').click(); };
-$('#importFile').onchange=async(ev)=>{
-  const f=ev.target.files[0]; if(!f) return;
+function importRoadmapText(text, label){
   try{
-    const parsed=JSON.parse(await f.text());
+    /* assistants often wrap JSON in ```json fences despite instructions: strip them */
+    const t=String(text).trim().replace(/^```[a-z]*\s*/i,'').replace(/\s*```$/,'');
+    const parsed=JSON.parse(t);
     if(!parsed || !Array.isArray(parsed.periods) || !Array.isArray(parsed.lanes) || !Array.isArray(parsed.elements)) throw new Error('missing periods, lanes or elements');
     if(!Array.isArray(parsed.sections) || !parsed.sections.length) parsed.sections=[{id:'s1',title:'',subtitle:'',collapsed:false,laneIds:parsed.lanes.map(l=>l.id)}];
     normStory(parsed);
     if(typeof parsed.today!=='number') parsed.today=0;
     snap(); doc=parsed; S.sel=[]; S.selKind=null; S.story=false; S.stepIdx=0; S.q='';
-    renderAll(); toast('Imported '+f.name);
+    renderAll(); toast('Imported '+label);
   }catch(err){ toast('Import failed: '+err.message); }
+}
+$('#pasteBtn').onclick=async()=>{
+  let text='';
+  if(navigator.clipboard && navigator.clipboard.readText && location.protocol!=='file:'){ try{ text=await navigator.clipboard.readText(); }catch(e){} }
+  if(!text) text=window.prompt('Paste the roadmap JSON here:')||'';
+  if(!text.trim()) return toast('Nothing to import');
+  importRoadmapText(text, 'pasted JSON');
 };
 $('#templateBtn').onclick=(ev)=>{ ev.stopPropagation(); openPop('template', $('#templateBtn')); };
+
+/* help panel: best practice for generating a roadmap with Copilot / Bob */
+function setHelp(on){ $('#helpPanel').hidden=!on; $('#helpBtn').setAttribute('aria-expanded', String(on)); }
+async function copyText(text, okMsg){
+  let ok=false;
+  if(navigator.clipboard && location.protocol!=='file:'){ try{ await navigator.clipboard.writeText(text); ok=true; }catch(e){} }
+  if(!ok){
+    const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta); ta.select();
+    try{ ok=document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+  }
+  toast(ok ? okMsg : 'Copy failed: select the text manually');
+}
+$('#helpBtn').onclick=(ev)=>{ ev.stopPropagation(); closePop(); setHelp($('#helpPanel').hidden); };
+$('#helpClose').onclick=()=>{ setHelp(false); $('#helpBtn').focus(); };
+$('#helpPanel').addEventListener('click', ev=>ev.stopPropagation());
+document.addEventListener('click', ()=>{ if(!$('#helpPanel').hidden) setHelp(false); });
+/* AI prompt = rules (read live from #agent-instructions) + optionally the roadmap currently on screen */
+function buildPrompt(){
+  const r=document.getElementById('agent-instructions');
+  if(!r) return null;
+  const withDoc=$('#helpInclDoc').checked;
+  let p=
+    'You are generating a roadmap JSON for IBM Roadmap Builder.\n'+
+    'Follow every rule below exactly. Reply with ONE valid JSON object only — no explanation, no markdown fences, no comments, no trailing commas.\n'+
+    'When the JSON is ready the user will import it directly.\n\n'+
+    '---\n\n'+r.textContent.trim()+'\n\n---\n\n';
+  if(withDoc){
+    p+='CURRENT ROADMAP (the roadmap the user has on screen right now, as JSON):\n'+JSON.stringify(doc)+'\n\n'+
+       'Change this roadmap as requested below and return the COMPLETE updated JSON document (not a diff). Keep every id, span and field that is not affected by the request.\n'+
+       'Requested change: <describe what to add, move, rename or remove>';
+  }else{
+    p+='Now generate a roadmap JSON for:\n'+
+       '- Topic: <what the roadmap is about>\n'+
+       '- Periods: <e.g. Q1 2026 to Q4 2027>, today = <current period>\n'+
+       '- Lanes (3 to 6, light to dark, last lane = cards): <workstreams>\n'+
+       '- Key deliverables / releases per period: <list>';
+  }
+  return p;
+}
+$('#helpCopyRules').onclick=()=>{
+  const p=buildPrompt();
+  if(!p) return toast('Prompt not found');
+  copyText(p, $('#helpInclDoc').checked ? 'Full prompt copied with current roadmap' : 'Full prompt copied');
+};
+$('#helpCopyPrompt').onclick=()=>copyText(
+  'Read the #agent-instructions block in the attached index.html first and follow it exactly.\n'+
+  'Then generate a roadmap as ONE JSON object only (no explanation) for:\n'+
+  '- Topic: <what the roadmap is about>\n'+
+  '- Periods: <e.g. Q1 2026 to Q4 2027>, today = <current period>\n'+
+  '- Lanes (3 to 6, light to dark, last lane = cards): <workstreams>\n'+
+  '- Key deliverables / releases per period: <list>',
+  'Starter prompt copied');
 
 function exportCanvasHTML(){
   const clone=$('#board').cloneNode(true);
@@ -1409,23 +2159,6 @@ async function doExportInner(fmt){
   if(fmt==='html') return exportCanvasHTML();
   if(fmt==='json'){
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(doc,null,2)],{type:'application/json'})); a.download='roadmap.json'; a.click(); toast('Exported roadmap.json'); return;
-  }
-  if(fmt==='deeplink'){
-    const url=window.docToDeepLink(doc);
-    // navigator.clipboard is blocked on file:// — use execCommand fallback
-    let ok=false;
-    if(navigator.clipboard && location.protocol!=='file:'){
-      try { await navigator.clipboard.writeText(url); ok=true; } catch(e){}
-    }
-    if(!ok){
-      const ta=document.createElement('textarea');
-      ta.value=url; ta.style.cssText='position:fixed;left:-9999px;top:0';
-      document.body.appendChild(ta); ta.select();
-      try { ok=document.execCommand('copy'); } catch(e){}
-      document.body.removeChild(ta);
-    }
-    if(ok){ toast('Deep link copied to clipboard'); } else { prompt('Copy this deep link:', url); }
-    return;
   }
   toast('Generating…');
   const board=$('#board');
@@ -1496,16 +2229,99 @@ function updateFsStoryBar(){
   bar.querySelectorAll('[data-fsstep]').forEach(b=>b.onclick=()=>stepTo(+b.dataset.fsstep));
 }
 
+/* ---------- onboarding modal (IBM Carbon feature guide) ---------- */
+let obCurrentSlide = 0;
+const OB_TOTAL_SLIDES = 5;
+
+function openOnboarding(idx = 0) {
+  closePop();
+  setHelp(false);
+  setOnboardingSlide(idx);
+  $('#obModal').hidden = false;
+  $('#obClose').focus();
+}
+
+function closeOnboarding() {
+  const dontShow = $('#obDontShow').checked;
+  try {
+    if (dontShow) {
+      localStorage.setItem('ibm_roadmap_onboarded_v2', 'true');
+    }
+  } catch(e){}
+  $('#obModal').hidden = true;
+  $('#tourBtn').focus();
+}
+
+function setOnboardingSlide(idx) {
+  obCurrentSlide = Math.max(0, Math.min(OB_TOTAL_SLIDES - 1, idx));
+  document.querySelectorAll('.ob-tab').forEach((tab, i) => {
+    const active = i === obCurrentSlide;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+  });
+  document.querySelectorAll('.ob-slide').forEach((slide, i) => {
+    slide.classList.toggle('active', i === obCurrentSlide);
+  });
+  document.querySelectorAll('.ob-pip').forEach((pip, i) => {
+    pip.classList.toggle('active', i === obCurrentSlide);
+  });
+  const isFirst = obCurrentSlide === 0;
+  const isLast = obCurrentSlide === OB_TOTAL_SLIDES - 1;
+  $('#obPrev').style.display = isFirst ? 'none' : 'flex';
+  $('#obNext').innerHTML = isLast
+    ? 'Get Started <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M14 3l-8 8-3.5-3.5.7-.7L6 9.6l7.3-7.3z"/></svg>'
+    : 'Next <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.3 3.3L8.6 4 12.1 7.5H2v1h10.1L8.6 12l.7.7 4.7-4.7z"/></svg>';
+}
+
+$('#tourBtn').onclick = () => openOnboarding(0);
+$('#obClose').onclick = closeOnboarding;
+$('#obSkip').onclick = closeOnboarding;
+$('#obPrev').onclick = () => setOnboardingSlide(obCurrentSlide - 1);
+$('#obNext').onclick = () => {
+  if (obCurrentSlide < OB_TOTAL_SLIDES - 1) {
+    setOnboardingSlide(obCurrentSlide + 1);
+  } else {
+    closeOnboarding();
+    toast('Welcome! Start editing or pick a template.');
+  }
+};
+
+document.querySelectorAll('.ob-tab').forEach(tab => {
+  tab.onclick = () => setOnboardingSlide(+tab.dataset.obtab);
+});
+document.querySelectorAll('.ob-pip').forEach(pip => {
+  pip.onclick = () => setOnboardingSlide(+pip.dataset.obpip);
+});
+
+$('#obTplQuantum').onclick = () => { closeOnboarding(); loadTemplate('quantum'); };
+$('#obTplPoc').onclick = () => { closeOnboarding(); loadTemplate('poc'); };
+$('#obTplBlank').onclick = () => { closeOnboarding(); loadTemplate('blank'); };
+
+$('#obModal').addEventListener('click', ev => {
+  if (ev.target === $('#obModal')) closeOnboarding();
+});
+
 /* keyboard */
 document.addEventListener('keydown', ev=>{
   const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
   const mod=ev.metaKey||ev.ctrlKey, k=ev.key;
   if(k==='Escape'){
+    if(!$('#obModal').hidden) return closeOnboarding();
     if(document.body.classList.contains('canvas-fs')) return toggleCanvasFS(false);
+    if(!$('#helpPanel').hidden){ setHelp(false); return $('#helpBtn').focus(); }
     if(S.pop) return closePop();
     if(typing) return document.activeElement.blur();
     if(S.story) return toggleStory(false);
     S.sel=[]; S.selKind=null; return renderAll();
+  }
+  if(!$('#obModal').hidden){
+    if(k==='ArrowRight'){ setOnboardingSlide(obCurrentSlide + 1); return; }
+    if(k==='ArrowLeft'){ setOnboardingSlide(obCurrentSlide - 1); return; }
+    if(k==='Enter'){
+      if(obCurrentSlide < OB_TOTAL_SLIDES - 1) setOnboardingSlide(obCurrentSlide + 1);
+      else closeOnboarding();
+      return;
+    }
   }
   if(mod && k.toLowerCase()==='z'){ ev.preventDefault(); return ev.shiftKey?redo():undo(); }
   if(mod && k.toLowerCase()==='y'){ ev.preventDefault(); return redo(); }
@@ -1542,27 +2358,33 @@ document.fonts?.ready.then(positionOverlays);
 function loadFromHash(){
   try {
     const hash = window.location.hash;
-    if (!hash.startsWith('#doc=')) return;
+    if (!hash.startsWith('#doc=')) return false;
     const b64 = hash.slice(5).replace(/-/g,'+').replace(/_/g,'/');
     const parsed = JSON.parse(atob(b64));
-    // Basic sanity check before replacing the default doc
-    if (parsed && parsed.periods && parsed.lanes && parsed.elements) {
+    if (parsed && Array.isArray(parsed.periods) && Array.isArray(parsed.lanes) && Array.isArray(parsed.elements)) {
       doc = normStory(parsed);
+      return true;
     }
-  } catch(e) {
-    // Malformed hash — silently keep the default doc
-  }
+  } catch(e){}
+  return false;
 }
-loadFromHash();
 
-/* ---------- helper: build a deep-link URL for any doc ----------
-   Usage in console: copy( window.docToDeepLink(doc) )
-   The MCP server uses the same encoding.
---------------------------------------------------------------- */
 window.docToDeepLink = function(d){
   const b64 = btoa(JSON.stringify(d)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   return location.origin + location.pathname + '#doc=' + b64;
 };
+
+const loadedFromHash = loadFromHash();
+
+function initOnboarding(){
+  try {
+    const seen = localStorage.getItem('ibm_roadmap_onboarded_v2');
+    if (!seen && !loadedFromHash) {
+      setTimeout(() => openOnboarding(0), 300);
+    }
+  } catch(e){}
+}
+initOnboarding();
 
 window.addEventListener('beforeunload', e=>{ if(!dirty) return; e.preventDefault(); e.returnValue=''; });
 
