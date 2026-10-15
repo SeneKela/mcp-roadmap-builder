@@ -11,11 +11,11 @@
 TASK: when the user pastes this page (or its source) and describes a roadmap, reply with ONE valid JSON document (the "doc") and nothing else. No explanation, no code fences, no comments, no trailing commas. The user pastes it with the Import button (or saves it as roadmap.json).
 DESIGN TARGET: the built-in "IBM Quantum" template. Chained chevron-arrow bars in light-to-dark swim lanes, umbrella headers, and ONE dark cards lane at the BOTTOM.
 
-## 1. DOC SHAPE (all keys required unless marked optional)
+## 1. DOC SHAPE (all keys required unless marked optional; "row" defaults to "auto")
 {
  "title": string,
  "today": int (0-based index into periods; the "now" column),
- "todayOffset": 0, "todayHidden": false,                      (optional)
+ "todayOffset": 0, "todayHidden": false, "narrativeHidden": false, (optional; true hides the gray narrative row)
  "periods": [ {"label": string, "status": STATUS|null, "narrative": string} ],
  "sections": [ {"id":"s1","title":string,"subtitle":string,"collapsed":false,"laneIds":[every lane id, top to bottom]} ],
  "lanes": [ {"id":string,"title":string,"color":"#hex","kind":"bars"|"cards","pastTint":bool} ],
@@ -29,7 +29,7 @@ ELEMENT = {
  "status": STATUS|null, "row": "auto"|1|2|3,
  "blocks": [BLOCK, ...]            first block MUST be {"type":"title","text":...},
  "meta": {"owner":"","tags":[],"link":""},
- optional: "tone":"lane"|"muted"|"neutral"|"inverse", "edge":"auto"|"flat"|"out"|"in"|"both" (bars only), "past":"auto"|"past"|"future", "color":"#hex"
+ optional (omit when not needed): "tone":"lane"|"muted"|"neutral"|"inverse", "edge":"auto"|"flat"|"out"|"in"|"both" (bars only), "past":"auto"|"past"|"future", "color":"#hex"
 }
 BLOCK types: {"type":"title","text"} {"type":"subtitle","text"} {"type":"chip","label","tone":"neutral"|"lane"|"inverse"} {"type":"metrics","lines":[string,...]} {"type":"entries","rows":[{"name","value"}]} {"type":"text","text"} {"type":"owner","name"} {"type":"progress","value":0-100}
 Allowed blocks: bar = title/owner/progress. umbrella and milestone = title only. card = any.
@@ -39,13 +39,13 @@ A milestone must have span.start == span.end.
 - Arrows are automatic: a bar gets a right chevron if another bar in the SAME row starts at end+1, and a left notch if another bar ends at start-1. So write bar sequences as CONTIGUOUS spans, e.g. [0..1] [2..2] [3..5] [6..6]. A gap means flat ends.
 - To force an arrow on a lone/last bar set "edge":"out". "both" = notch+tip, "in" = notch, "flat" = none. Never set edge on umbrella/card/milestone.
 - Umbrellas draw in a thin row ABOVE the bars of their lane. Never give them "row".
-- Overlapping spans are pushed to the next row automatically; set "row":2 (or 3) explicitly for parallel streams. Max 3 rows per lane.
+- Overlapping spans are pushed to the next row automatically; set "row":2 (or 3) explicitly for parallel streams. Keep to 3 rows per lane (design guidance for readability, not enforced by the engine).
 - A bar with span.end < today in a lane with pastTint:true renders muted automatically. Do not set tone for that.
 - Cards default to the dark "inverse" tone. Use "tone":"muted" on the in-flight card, "tone":"lane" on a hero card.
 - Card height is fixed: keep title <= 14 chars, subtitle <= 10 chars, chip <= 18 chars, metrics <= 2 lines of <= 28 chars.
 
 ## 3. HARD DESIGN RULES (follow all)
-1. At least 80% of elements are variant "bar" or "umbrella". Cards live in exactly ONE lane, the LAST lane of the last section.
+1. At least 80% of elements are variant "bar" or "umbrella". Cards live in exactly ONE lane, normally the LAST lane of the last section (dark #262626, pastTint:false). Exception: a short process roadmap (e.g. an 8-week POC) may place its single cards lane earlier, using a lane accent colour and pastTint:true.
 2. Lane order and colours, light to dark, top to bottom (use as many as needed, in this order, max 6 lanes):
    enablers/experience #c6c6c6 bars pastTint:true -> applications #ff7eb6 bars true -> discovery/research #be95ff bars true -> platform/orchestration #0f62fe bars true -> runtime/execution #4d4d4d bars false -> deliverables/releases/hardware #262626 CARDS false.
    Other allowed accents: #08bdba teal, #42be65 green, #ff832b orange, #4589ff light blue, #f1c21b yellow. Never red (#da1e28).
@@ -61,11 +61,11 @@ A milestone must have span.start == span.end.
 12. IDs: lanes short slugs ("dev","orch","hw"); elements "e1","e2",... cards "c1","c2",...; story "st1"... All unique.
 
 ## 4. ANTI-PATTERNS (never output)
-cards in several lanes; cards lane not last; bars with gaps everywhere (no arrows); sentences as titles; >3 rows per lane; statuses on everything; >6 lanes; pastTint:true on the cards lane or on #4d4d4d/#262626 lanes; overlapping spans in the same explicit row; span index >= periods.length; laneId not in lanes; lane missing from sections[].laneIds; missing narratives or story; markdown fences or prose around the JSON.
+cards in several lanes; cards lane not last in the IBM Quantum style (unless the POC-style exception in rule 1 applies); bars with gaps everywhere (no arrows); sentences as titles; >3 rows per lane; statuses on everything; >6 lanes; pastTint:true on #4d4d4d/#262626 lanes (or on the dark cards lane); overlapping spans in the same explicit row; span index >= periods.length; laneId not in lanes; lane missing from sections[].laneIds; missing narratives or story; markdown fences or prose around the JSON.
 
 ## 5. SELF-CHECK BEFORE ANSWERING
 - JSON parses. periods.length >= 1. Every span in range. Every laneId exists. Every lane id is in sections[0].laneIds. Every element has a title block. Only the 6 STATUS strings or null. Only the 4 variants.
-- Last lane kind is "cards" and holds all cards. >= 80% bars/umbrellas. Bar chains are contiguous. Every period has a narrative. 4-6 story steps.
+- The single cards lane holds all cards (last lane unless the rule 1 exception applies). >= 80% bars/umbrellas. Bar chains are contiguous. Every period has a narrative. 4-6 story steps.
 
 ## 6. MINIMAL EXAMPLE (shape reference, 4 periods, 2 lanes)
 {"title":"Platform Roadmap","today":1,"periods":[{"label":"Q1","status":"completed","narrative":"Shipped the core API."},{"label":"Q2","status":"on-target","narrative":"Rolling out SDKs to early adopters."},{"label":"Q3","status":null,"narrative":"General availability across regions."},{"label":"Q4","status":null,"narrative":"Enterprise controls and scale."}],"sections":[{"id":"s1","title":"Platform","subtitle":"Roadmap","collapsed":false,"laneIds":["plat","rel"]}],"lanes":[{"id":"plat","title":"Platform services","color":"#0f62fe","kind":"bars","pastTint":true},{"id":"rel","title":"Releases","color":"#262626","kind":"cards","pastTint":false}],"elements":[{"id":"e1","laneId":"plat","variant":"umbrella","span":{"start":0,"end":3},"status":null,"row":"auto","blocks":[{"type":"title","text":"Core platform"}],"meta":{"owner":"","tags":[],"link":""}},{"id":"e2","laneId":"plat","variant":"bar","span":{"start":0,"end":0},"status":"completed","row":"auto","blocks":[{"type":"title","text":"Core API"}],"meta":{"owner":"","tags":[],"link":""}},{"id":"e3","laneId":"plat","variant":"bar","span":{"start":1,"end":2},"status":"on-target","row":"auto","blocks":[{"type":"title","text":"SDKs and tooling"}],"meta":{"owner":"","tags":[],"link":""}},{"id":"e4","laneId":"plat","variant":"bar","span":{"start":3,"end":3},"status":null,"row":"auto","edge":"out","blocks":[{"type":"title","text":"Scale"}],"meta":{"owner":"","tags":[],"link":""}},{"id":"c1","laneId":"rel","variant":"card","span":{"start":0,"end":0},"status":"completed","row":"auto","blocks":[{"type":"title","text":"Alpha"},{"type":"subtitle","text":"(v0.9)"},{"type":"chip","label":"Preview","tone":"neutral"},{"type":"metrics","lines":["3 services | 1 region"]}],"meta":{"owner":"","tags":[],"link":""}},{"id":"c2","laneId":"rel","variant":"card","span":{"start":1,"end":1},"status":"on-target","row":"auto","tone":"muted","blocks":[{"type":"title","text":"Beta"},{"type":"subtitle","text":"(v1.0)"},{"type":"chip","label":"Early access","tone":"neutral"},{"type":"metrics","lines":["8 services | 2 regions"]}],"meta":{"owner":"","tags":[],"link":""}},{"id":"c3","laneId":"rel","variant":"card","span":{"start":2,"end":3},"status":null,"row":"auto","blocks":[{"type":"title","text":"GA"},{"type":"subtitle","text":"(v2.0)"},{"type":"chip","label":"Production","tone":"neutral"},{"type":"metrics","lines":["12 services | 5 regions"]}],"meta":{"owner":"","tags":[],"link":""}}],"story":[{"id":"st1","title":"Releases","text":"Alpha to GA over four quarters.","laneIds":["rel"],"elementIds":[]},{"id":"st2","title":"Platform","text":"Core API first, then SDKs, then scale.","laneIds":["plat"],"elementIds":[]}]}
@@ -457,7 +457,7 @@ pre.json{background:var(--ins-section);border-radius:4px;padding:8px;font-family
       <button class="tb" id="undoBtn" title="Undo ⌘Z" style="justify-content:center;padding:0;width:30px;min-width:30px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M5 3.5L2 6.5l3 3M2 6.5h7.5a4 4 0 010 8H7"/></svg></button>
       <button class="tb" id="redoBtn" title="Redo ⇧⌘Z" style="justify-content:center;padding:0;width:30px;min-width:30px"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M11 3.5l3 3-3 3M14 6.5H6.5a4 4 0 000 8H9"/></svg></button>
       <span class="tsep"></span>
-      <button class="tb" id="zOut" title="Zoom out" style="justify-content:center;padding:0;width:28px;min-width:28px"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3 7.5h10v1H3z"/></svg></button><span class="zoom mono" id="zLbl">80%</span><button class="tb" id="zIn" title="Zoom in" style="justify-content:center;padding:0;width:28px;min-width:28px"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3v4H4v1h4v4h1V8h4V7H9V3z"/></svg></button>
+      <button class="tb" id="zOut" title="Zoom out" style="justify-content:center;padding:0;width:28px;min-width:28px"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3 7h10v2H3z"/></svg></button><span class="zoom mono" id="zLbl">80%</span><button class="tb" id="zIn" title="Zoom in" style="justify-content:center;padding:0;width:28px;min-width:28px"><svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M13 7H9V3H7v4H3v2h4v4h2V9h4V7z"/></svg></button>
       <button class="tb" id="pasteBtn" title="Import roadmap JSON from the clipboard"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L3 6l.7.7L7.2 3.2V11h1V3.2l3.5 3.5.7-.7L8 1zM2 13h12v1H2z"/></svg>Import</button>
       <button class="tb" id="exportBtn" title="Export"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 11l5-5-.7-.7L8.8 8.8V1h-1v7.8L4.3 5.3l-.7.7 5 5zM2 13h12v1H2z"/></svg>Export</button>
       <span class="tsep"></span>
@@ -1050,8 +1050,8 @@ function statusIcon(id, s=14){
 const I = {
   chev:`<svg class="chev" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z"/></svg>`,
   caret:`<svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor"><path d="M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z"/></svg>`,
-  plus:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3v4H4v1h4v4h1V8h4V7H9V3z"/></svg>`,
-  minus:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 7.5h10v1H3z"/></svg>`,
+  plus:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13 7H9V3H7v4H3v2h4v4h2V9h4V7z"/></svg>`,
+  minus:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 7h10v2H3z"/></svg>`,
   more:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3.5" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.5" r="1.5"/></svg>`,
   grip:`<svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor"><rect x="10" y="6" width="4" height="4"/><rect x="18" y="6" width="4" height="4"/><rect x="10" y="14" width="4" height="4"/><rect x="18" y="14" width="4" height="4"/><rect x="10" y="22" width="4" height="4"/><rect x="18" y="22" width="4" height="4"/></svg>`,
   eye:`<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5C4.2 3.5 1.2 6.8 1 7c0 .1 0 .2.1.2 1.2 1.8 3.9 4.3 6.9 4.3 3.8 0 6.8-3.3 7-3.5 0-.1 0-.2-.1-.2C13.7 6 11 3.5 8 3.5zm0 7c-2.3 0-4.5-1.8-5.7-3C3.5 6.3 5.7 4.5 8 4.5s4.5 1.8 5.7 3c-1.2 1.2-3.4 3-5.7 3zm0-4.8c-1 0-1.8.8-1.8 1.8s.8 1.8 1.8 1.8 1.8-.8 1.8-1.8-.8-1.8-1.8-1.8z"/></svg>`,
@@ -1397,7 +1397,7 @@ function renderCanvas(){
   const pSel = i => S.selKind==='period' && S.sel[0]===i ? 'on' : '';
   let h = `<div class="rm-title">${esc(doc.title)}</div>`;
   h += `<div class="grid"><div></div>${doc.periods.map((p,i)=>`<div class="ph ${pSel(i)}" data-period="${i}" id="ph${i}">${esc(p.label)}${p.status?statusIcon(p.status,15):''}</div>`).join('')}</div>`;
-  h += `<div class="grid"><div></div>${doc.periods.map((p,i)=>`<div class="nar ${pSel(i)}" data-period="${i}">${esc(p.narrative)}</div>`).join('')}</div>`;
+  if(!doc.narrativeHidden) h += `<div class="grid"><div></div>${doc.periods.map((p,i)=>`<div class="nar ${pSel(i)}" data-period="${i}">${esc(p.narrative)}</div>`).join('')}</div>`;
   for(const sec of doc.sections){
     h += `<div class="sec-title" data-section="${sec.id}"><div>${esc(sec.title)}<small>${esc(sec.subtitle)} ${sec.collapsed?'→':'↓'}</small></div></div>`;
     if(!sec.collapsed) h += sec.laneIds.map(getLane).filter(Boolean).map(renderLane).join('');
@@ -1473,14 +1473,15 @@ function renderLeft(){
     const tools=`<div class="sdiv"></div>
       <div class="srow">
         <button class="btn ${ed?'dark':'outline'}" data-sact="edit">${ed?'Done':'Edit step'}</button>
+        <button class="btn outline" data-sact="add" title="Add a step after this one">${I.plus} Add step</button>
       </div>
-      <div class="sgroup">Arrange</div>
+      ${ed?`<div class="sgroup">Arrange</div>
       <div class="srow">
         <button class="btn sm ghost" data-sact="dup" title="Duplicate step">${I.copy} Duplicate</button>
         <button class="btn sm ghost" data-sact="left" title="Move step earlier" ${S.stepIdx===0?'disabled':''}>← Earlier</button>
         <button class="btn sm ghost" data-sact="right" title="Move step later" ${S.stepIdx===n-1?'disabled':''}>Later →</button>
       </div>
-      <div class="srow" style="margin-top:6px"><button class="btn sm ghost danger" data-sact="del" title="Delete step">${I.x} Delete step</button></div>`;
+      <div class="srow" style="margin-top:6px"><button class="btn sm ghost danger" data-sact="del" title="Delete step">${I.x} Delete step</button></div>`:''}`;
     let body;
     if(ed){
       const feat=st.elementIds.map(id=>[id,titleOf(id)]).filter(x=>x[1]!=null);
@@ -1497,7 +1498,7 @@ function renderLeft(){
       body = `<h2>${esc(st.title)||'<span style="color:var(--t3)">Untitled step</span>'}</h2><p>${esc(st.text)}</p>
         ${notes.map(e=>`<div class="snote"><b>${esc(titleOf(e.id))}</b>${esc(e.note)}</div>`).join('')}`;
     }
-    L.innerHTML = `<div class="story"><div class="shead"><div class="eyebrow">Story · Step ${S.stepIdx+1} of ${n}</div><button class="btn sm outline" data-sact="add" title="Add a step after this one">${I.plus} Add step</button></div>${pips}${body}
+    L.innerHTML = `<div class="story"><div class="shead"><div class="eyebrow">Story · Step ${S.stepIdx+1} of ${n}</div></div>${pips}${body}
       <div class="nav" style="margin-top:16px"><button class="btn outline" data-stepnav="-1">← Prev</button><button class="btn dark" data-stepnav="1">Next →</button></div>${tools}</div>`;
     return;
   }
@@ -1640,7 +1641,7 @@ function insPeriod(i){
   return `<div class="ins-head"><span class="vbtn">${I.cal}Period</span></div>
     <input class="name" data-pfield="label" value="${esc(p.label)}">
     <div class="sec-b">${row('Status', seg('status',[['null','None'],['completed',statusIcon('completed',12)],['on-target',statusIcon('on-target',12)]],p.status??'null','data-pset'))}
-    <div class="lbl" style="margin:6px 0 4px">Outcome narrative</div><textarea class="f" rows="4" data-pfield="narrative">${esc(p.narrative)}</textarea>
+    <div class="lbl" style="margin:6px 0 4px;display:flex;align-items:center">Outcome narrative<span class="sp"></span><button class="icon-btn sm" data-act="toggleNarrativeHidden" title="${doc.narrativeHidden?'Show narrative line on canvas':'Hide narrative line on canvas'}">${doc.narrativeHidden?I.eyeOff:I.eye}</button></div><textarea class="f" rows="4" data-pfield="narrative" ${doc.narrativeHidden?'style="opacity:.6"':''}>${esc(p.narrative)}</textarea>${doc.narrativeHidden?'<div class="mono" style="font-size:10px;color:var(--t2);margin-top:4px">Narrative line is hidden on the canvas.</div>':''}
     <div style="margin-top:8px"><button class="btn ${doc.today===i?'dark':''}" data-act="setToday">${doc.today===i?'This is today':'Set as today'}</button></div></div>`;
 }
 function insRoadmap(){
@@ -1926,6 +1927,7 @@ $('#ins').addEventListener('click', ev=>{
   if(a==='laneDelete'){ snap(); const id=S.sel[0]; doc.lanes=doc.lanes.filter(l=>l.id!==id); doc.sections.forEach(s=>s.laneIds=s.laneIds.filter(x=>x!==id)); doc.elements=doc.elements.filter(e=>e.laneId!==id); S.sel=[]; S.selKind=null; toast('Lane deleted'); return renderAll(); }
   if(a==='setToday'){ snap(); doc.today=S.sel[0]; doc.todayOffset=0; return renderAll(); }
   if(a==='toggleTodayHidden'){ snap(); doc.todayHidden=!doc.todayHidden; return renderAll(); }
+  if(a==='toggleNarrativeHidden'){ snap(); doc.narrativeHidden=!doc.narrativeHidden; return renderAll(); }
   if(a==='addPeriod'){ toast('Prototype: fixed 12-period timeline'); }
 });
 

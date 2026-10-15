@@ -108,6 +108,7 @@ IBM Roadmap Builder — doc JSON schema
   "today": number,           // Index of the current period (0-based)
   "todayOffset": number,     // Fine offset in px (use 0)
   "todayHidden": boolean,    // Hide the today line? (use false)
+  "narrativeHidden": boolean, // Hide the gray narrative row under period titles? (optional, default false)
 
   "periods": [               // Time columns — left to right
     {
