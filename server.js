@@ -109,6 +109,7 @@ IBM Roadmap Builder — doc JSON schema
   "todayOffset": number,     // Fine offset in px (use 0)
   "todayHidden": boolean,    // Hide the today line? (use false)
   "narrativeHidden": boolean, // Hide the gray narrative row under period titles? (optional, default false)
+  "columnWidth": number|null, // Optional px (60-600), same for every period column. null/omit = Auto: 1920px canvas, columns share the width equally
 
   "periods": [               // Time columns — left to right
     {
