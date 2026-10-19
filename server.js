@@ -179,6 +179,8 @@ Suggested colors (IBM Carbon palette):
   #0f62fe (blue), #08bdba (teal), #42be65 (green), #ff832b (orange),
   #ff7eb6 (pink), #be95ff (purple), #f1c21b (yellow), #4589ff (light blue),
   #da1e28 (red), #c6c6c6 (gray), #262626 (dark)
+  Cool gray: #c1c7cd (30), #697077 (60), #21272a (90)
+  Warm gray: #cac5c4 (30), #726e6e (60), #272525 (90)
 `.trim();
 
 // ─── Server Factory ──────────────────────────────────────────────────────────
